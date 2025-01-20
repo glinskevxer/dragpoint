@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dragpoint"
+version = "0.1.0"
+description = "Stroke font and engraving toolpath compiler for control panel legend plates"
+requires-python = ">=3.11"
+dependencies = ["click==8.1.8"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.4",
+  "pytest-cov==6.0.0",
+  "coverage==7.6.10",
+  "ruff==0.9.2",
+  "mypy==1.14.1",
+]
+
+[project.scripts]
+dragpoint = "dragpoint.cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dragpoint"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "docs", "README.md", "constraints.txt"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM", "RET", "N"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+files = ["src", "tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/dragpoint"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error"]
+addopts = "--strict-markers --strict-config"
+
+[tool.ruff.lint.per-file-ignores]
+# These read as sentences where they are raised. `raise BadLength(text, why)`
+# says more at the call site than `BadLengthError` would, and every one of
+# them descends from `DragpointError` so nothing is ambiguous on the way out.
+"src/dragpoint/errors.py" = ["N818"]

@@ -1,0 +1,58 @@
+"""The exceptions dragpoint raises, and nothing else.
+
+Every one of these carries the thing that went wrong as data, not as a
+prebaked sentence, so a caller can decide whether to print it, count it or
+turn it into a row in a violation report. The CLI is the only layer allowed
+to turn one into English.
+"""
+
+from __future__ import annotations
+
+__all__ = [
+    "BadLength",
+    "BadUnit",
+    "DragpointError",
+    "OutOfRange",
+]
+
+
+class DragpointError(Exception):
+    """Base class for everything this package raises deliberately."""
+
+
+class BadUnit(DragpointError):
+    """A unit suffix that is not one this shop uses."""
+
+    def __init__(self, suffix: str, known: tuple[str, ...]) -> None:
+        super().__init__(suffix, known)
+        self.suffix = suffix
+        self.known = known
+
+    def __str__(self) -> str:
+        return f"unknown unit {self.suffix!r}, expected one of {', '.join(self.known)}"
+
+
+class BadLength(DragpointError):
+    """A length that could not be read at all."""
+
+    def __init__(self, text: str, why: str) -> None:
+        super().__init__(text, why)
+        self.text = text
+        self.why = why
+
+    def __str__(self) -> str:
+        return f"cannot read {self.text!r} as a length: {self.why}"
+
+
+class OutOfRange(DragpointError):
+    """A value that parsed cleanly and is still not usable."""
+
+    def __init__(self, what: str, value: float, low: float, high: float) -> None:
+        super().__init__(what, value, low, high)
+        self.what = what
+        self.value = value
+        self.low = low
+        self.high = high
+
+    def __str__(self) -> str:
+        return f"{self.what} is {self.value:g}, outside {self.low:g} to {self.high:g}"
