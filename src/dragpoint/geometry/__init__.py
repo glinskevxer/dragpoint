@@ -7,6 +7,7 @@ buried inside a glyph outline where no layout code can reach it.
 
 from dragpoint.geometry.box import Box
 from dragpoint.geometry.point import Point
+from dragpoint.geometry.stroke import Stroke, join_runs
 from dragpoint.geometry.transform import Transform
 
-__all__ = ["Box", "Point", "Transform"]
+__all__ = ["Box", "Point", "Stroke", "Transform", "join_runs"]
