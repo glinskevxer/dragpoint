@@ -6,6 +6,7 @@ made of centreline strokes on an integer design grid, a small metrics block,
 and a kerning table, which between them is everything the shaper needs.
 """
 
+from dragpoint.font.face import FaceMetrics, StrokeFace
 from dragpoint.font.glyph import Glyph, glyph_name_for
 
-__all__ = ["Glyph", "glyph_name_for"]
+__all__ = ["FaceMetrics", "Glyph", "StrokeFace", "glyph_name_for"]

@@ -12,6 +12,7 @@ __all__ = [
     "BadLength",
     "BadUnit",
     "DragpointError",
+    "MissingGlyph",
     "OutOfRange",
 ]
 
@@ -56,3 +57,15 @@ class OutOfRange(DragpointError):
 
     def __str__(self) -> str:
         return f"{self.what} is {self.value:g}, outside {self.low:g} to {self.high:g}"
+
+
+class MissingGlyph(DragpointError):
+    """A character the face cannot draw and has no fallback for."""
+
+    def __init__(self, name: str, face: str) -> None:
+        super().__init__(name, face)
+        self.name = name
+        self.face = face
+
+    def __str__(self) -> str:
+        return f"face {self.face} has no glyph named {self.name!r}"
