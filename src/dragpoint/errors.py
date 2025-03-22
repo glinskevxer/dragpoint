@@ -12,6 +12,7 @@ __all__ = [
     "BadLength",
     "BadUnit",
     "DragpointError",
+    "FontSyntax",
     "MissingGlyph",
     "OutOfRange",
 ]
@@ -69,3 +70,21 @@ class MissingGlyph(DragpointError):
 
     def __str__(self) -> str:
         return f"face {self.face} has no glyph named {self.name!r}"
+
+
+class FontSyntax(DragpointError):
+    """A .strk file that does not parse, with the line it went wrong on.
+
+    Line zero means the problem is with the file as a whole rather than with
+    any one line, which is how a missing header field is reported.
+    """
+
+    def __init__(self, source: str, line: int, why: str) -> None:
+        super().__init__(source, line, why)
+        self.source = source
+        self.line = line
+        self.why = why
+
+    def __str__(self) -> str:
+        where = f"{self.source}:{self.line}" if self.line else self.source
+        return f"{where}: {self.why}"
