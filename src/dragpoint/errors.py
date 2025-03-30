@@ -12,6 +12,7 @@ __all__ = [
     "BadLength",
     "BadUnit",
     "DragpointError",
+    "FaceNotFound",
     "FontSyntax",
     "MissingGlyph",
     "OutOfRange",
@@ -88,3 +89,15 @@ class FontSyntax(DragpointError):
     def __str__(self) -> str:
         where = f"{self.source}:{self.line}" if self.line else self.source
         return f"{where}: {self.why}"
+
+
+class FaceNotFound(DragpointError):
+    """A face reference that names neither a shipped face nor a file."""
+
+    def __init__(self, name: str, shipped: tuple[str, ...]) -> None:
+        super().__init__(name, shipped)
+        self.name = name
+        self.shipped = shipped
+
+    def __str__(self) -> str:
+        return f"no face called {self.name!r}, shipped faces are {', '.join(self.shipped)}"
