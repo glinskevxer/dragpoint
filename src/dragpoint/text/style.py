@@ -76,17 +76,30 @@ class TextStyle:
     def glyph_transform(self) -> Transform:
         """The shape distortion applied to every glyph, in millimetre space.
 
-        Condense first, then slant, then mirror. The order is fixed and it
-        matters: slanting a condensed glyph leans the condensed stem, while
-        condensing a slanted one changes the lean angle as well, which is not
-        what anybody means by a fifteen degree oblique.
+        Condense first, then slant. The order is fixed and it matters:
+        slanting a condensed glyph leans the condensed stem, while condensing
+        a slanted one changes the lean angle as well, which is not what
+        anybody means by a fifteen degree oblique.
+
+        Mirroring is not here. Reverse engraving flips the whole run, not
+        each letter in place, and a per glyph flip would give a line of
+        backwards letters still reading left to right.
         """
         transform = Transform.scaling(self.condense, 1.0)
         if self.slant:
             transform = transform.then(Transform.slant(self.slant))
-        if self.mirror:
-            transform = transform.then(Transform.mirror_x())
         return transform
+
+    def run_transform(self, width: float) -> Transform:
+        """What a whole run of ``width`` millimetres gets after shaping.
+
+        Only mirroring lands here, and the translation puts the flipped run
+        back on the same span it started on, so a mirrored legend still
+        occupies the box the layout reserved for it.
+        """
+        if not self.mirror:
+            return Transform.identity()
+        return Transform.mirror_x().then(Transform.translation(width, 0.0))
 
     def condensed_to(self, factor: float) -> TextStyle:
         """A copy at a different condense, for the fitter to try."""

@@ -79,10 +79,23 @@ def test_condense_happens_before_slant_so_the_lean_angle_survives() -> None:
     assert moved.x == pytest.approx(10.0 * math.tan(math.radians(20.0)))
 
 
-def test_mirror_flips_last() -> None:
+def test_mirror_is_not_a_glyph_level_distortion() -> None:
     style = TextStyle(cap_height=3.0, condense=0.5, mirror=True)
-    assert style.glyph_transform().apply(Point(2.0, 5.0)) == Point(-1.0, 5.0)
-    assert style.glyph_transform().is_mirrored
+    assert style.glyph_transform().apply(Point(2.0, 5.0)) == Point(1.0, 5.0)
+    assert not style.glyph_transform().is_mirrored
+
+
+def test_the_run_transform_flips_the_run_onto_the_span_it_started_on() -> None:
+    style = TextStyle(cap_height=3.0, mirror=True)
+    flip = style.run_transform(20.0)
+    assert flip.is_mirrored
+    assert flip.apply(Point(0.0, 0.0)) == Point(20.0, 0.0)
+    assert flip.apply(Point(20.0, 0.0)) == Point(0.0, 0.0)
+
+
+def test_an_unmirrored_style_has_no_run_transform() -> None:
+    flip = TextStyle(cap_height=3.0).run_transform(20.0)
+    assert flip.apply(Point(3.0, 4.0)) == Point(3.0, 4.0)
 
 
 def test_the_copy_helpers_change_one_thing_each() -> None:
