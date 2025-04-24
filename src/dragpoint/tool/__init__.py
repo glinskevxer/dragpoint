@@ -6,5 +6,14 @@ the geometry.
 """
 
 from dragpoint.tool.cutter import Cutter, catalogue_cutter
+from dragpoint.tool.material import Material, material
+from dragpoint.tool.passes import PassPlan, plan_passes
 
-__all__ = ["Cutter", "catalogue_cutter"]
+__all__ = [
+    "Cutter",
+    "Material",
+    "PassPlan",
+    "catalogue_cutter",
+    "material",
+    "plan_passes",
+]
