@@ -6,6 +6,7 @@ here so that a spec can be read back out and compared with what came in.
 """
 
 from dragpoint.spec.feature import Feature, FeatureKind
+from dragpoint.spec.job import JobSpec, Sheet
 from dragpoint.spec.plate import PlateSpec
 
-__all__ = ["Feature", "FeatureKind", "PlateSpec"]
+__all__ = ["Feature", "FeatureKind", "JobSpec", "PlateSpec", "Sheet"]
