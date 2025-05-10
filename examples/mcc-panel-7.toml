@@ -1,0 +1,93 @@
+# Legend plates for the number 7 motor control centre.
+#
+# Every distance in here can carry a unit. The customer works in inches and
+# the switch bore came off their drawing, so it is written the way they sent
+# it and converted on the way in.
+
+[job]
+name = "MCC-7"
+cutter = "V30-015"
+post = "iso"
+spring_pass = false
+notes = "Cut after the panel is drilled, the bores are the datum."
+
+[job.sheet]
+stock = "LAM16-BW"
+width = "300mm"
+height = "600mm"
+margin = "6mm"
+kerf = "1.5mm"
+
+[defaults]
+stock = "LAM16-BW"
+face = "panelgothic"
+cap_height = "3mm"
+margin = "2mm"
+halign = "centre"
+valign = "middle"
+fit = "condense"
+
+[[plate]]
+name = "P-101"
+size = ["60mm", "20mm"]
+lines = ["FEED PUMP 1", "RUN"]
+quantity = 2
+
+[[plate]]
+name = "P-102"
+size = ["60mm", "20mm"]
+lines = ["FEED PUMP 2", "RUN"]
+quantity = 2
+
+[[plate]]
+name = "P-103"
+size = ["60mm", "20mm"]
+lines = ["FEED PUMP 3", "RUN"]
+quantity = 2
+
+[[plate]]
+name = "P-110"
+size = ["80mm", "30mm"]
+lines = ["EMERGENCY STOP"]
+cap_height = "5mm"
+stock = "LAM32-RW"
+border = "2mm"
+fit = "both"
+
+  [[plate.feature]]
+  name = "bore"
+  kind = "bore"
+  at = ["40mm", "10mm"]
+  diameter = "0.875in"
+  clearance = "1.5mm"
+
+[[plate]]
+name = "P-120"
+size = ["100mm", "25mm"]
+lines = ["INCOMER 400V 3PH", "ISOLATE BEFORE WORKING"]
+cap_height = "2.5mm"
+tracking = "0.15mm"
+halign = "left"
+
+  [[plate.feature]]
+  name = "fix-left"
+  kind = "hole"
+  at = ["6mm", "12.5mm"]
+  diameter = "4.2mm"
+  clearance = "1mm"
+
+  [[plate.feature]]
+  name = "fix-right"
+  kind = "hole"
+  at = ["94mm", "12.5mm"]
+  diameter = "4.2mm"
+  clearance = "1mm"
+
+[[plate]]
+name = "P-130"
+size = ["45mm", "12mm"]
+lines = ["LOCAL"]
+cap_height = "4mm"
+stock = "ANOD-10"
+quantity = 6
+tags = ["spares"]

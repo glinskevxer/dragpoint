@@ -16,6 +16,7 @@ __all__ = [
     "FontSyntax",
     "MissingGlyph",
     "OutOfRange",
+    "SpecError",
 ]
 
 
@@ -101,3 +102,17 @@ class FaceNotFound(DragpointError):
 
     def __str__(self) -> str:
         return f"no face called {self.name!r}, shipped faces are {', '.join(self.shipped)}"
+
+
+class SpecError(DragpointError):
+    """A job file that does not describe a job, and where in it."""
+
+    def __init__(self, source: str, where: str, why: str) -> None:
+        super().__init__(source, where, why)
+        self.source = source
+        self.where = where
+        self.why = why
+
+    def __str__(self) -> str:
+        place = f"{self.source} [{self.where}]" if self.where else self.source
+        return f"{place}: {self.why}"
