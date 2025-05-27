@@ -12,6 +12,7 @@ at one point and are far apart everywhere else.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 
 from dragpoint.geometry.point import Point
@@ -22,7 +23,9 @@ __all__ = [
     "closest_approach",
     "point_to_segment",
     "segment_to_segment",
+    "meets_itself",
     "segments_cross",
+    "self_approach",
     "stroke_to_stroke",
 ]
 
@@ -81,35 +84,175 @@ def stroke_to_stroke(left: Stroke, right: Stroke, *, cutoff: float | None = None
     A plate with three hundred strokes is fifty thousand segment pairs, and
     the legibility rule only ever asks whether anything is closer than one
     number, so the exact value below that number is not worth computing.
+
+    Zero means they meet. Nothing here decides what meeting means; that is
+    :func:`closest_approach`, which throws the pair away.
     """
     best = float("inf")
-    left_boxes = [(first, second) for first, second in left.segments]
+    left_segments = list(left.segments)
     for b1, b2 in right.segments:
-        for a1, a2 in left_boxes:
+        for a1, a2 in left_segments:
             gap = segment_to_segment(a1, a2, b1, b2)
-            if gap < best:
-                best = gap
-                if cutoff is not None and best < cutoff:
-                    return best
+            if gap >= best:
+                continue
+            best = gap
+            if cutoff is not None and best < cutoff:
+                return best
     return best
 
 
-def closest_approach(strokes: Iterable[Stroke], *, cutoff: float | None = None) -> float:
-    """The smallest gap between any two different strokes in the group.
+def self_approach(
+    stroke: Stroke,
+    *,
+    min_arc: float,
+    fold_ratio: float = 1.0,
+    cutoff: float | None = None,
+    touch: float = QUANTUM,
+    step: float | None = None,
+) -> float:
+    """How close a stroke comes to a part of itself far away along the path.
 
-    Returns infinity for fewer than two strokes, which reads correctly in the
-    rules: nothing is too close to anything when there is nothing to be close
-    to. A stroke is never compared with itself, so a glyph whose own stroke
-    doubles back does not trip a neighbour rule. That case belongs to the
-    self overlap rule and is measured separately.
+    Two places on a smooth curve are always close together in space when
+    they are close together along the curve, and that is the curve rather
+    than a fault. ``min_arc`` is how far apart two places have to be
+    measured along the stroke before their distance in space means anything.
+
+    Without that gate the measurement is dominated by the sampling: a circle
+    drawn with twenty chords reports the length of one chord, and reports it
+    more tightly the more finely the circle was drawn. With it, what comes
+    back is what the rule is asking about, which is a stroke that has come
+    back on ground it already covered.
+
+    The stroke is walked as points rather than as segments, because a fold
+    is only a fold away from the turn. At the turn itself the two sides are
+    as close along the path as they are in space, and it is at the far end,
+    where the path between them is the whole fold, that they are a fault.
+    ``step`` is the walking distance and defaults to a quarter of
+    ``min_arc``, which puts the answer within an eighth of that of exact.
+
+    A stroke that meets itself is a junction the face drew on purpose, such
+    as the waist of an eight or the crossing of an ampersand. Nothing useful
+    can be said about one, because every measurement near the crossing is
+    small for the same reason the crossing is there, so it returns infinity
+    and is left to the eye.
+
+    On a closed stroke the path distance wraps, since the two ends of a
+    closed run are the same place.
+
+    ``min_arc`` has no default. It is the sampling gate and should be a
+    small multiple of the step, not a real limit.
+
+    ``fold_ratio`` is what separates a fold from a bend. Two places on a
+    straight stroke are as far apart in space as they are along it, so the
+    ratio is one; a right angle gives about one and a half; a circle coming
+    back on itself gives pi over two, and a sharp point gives more the
+    sharper it is. Asking for a ratio above one and a half therefore means a
+    stem is never a fold, a square corner never is, and a closed counter or
+    a spike always is. Both of those last two fill in under a wide cutter,
+    which is the whole question.
+
+    Returns infinity when no two places on the stroke are far enough apart
+    along it to compare.
+    """
+    if meets_itself(stroke):
+        return float("inf")
+    samples = _walk(stroke, step if step is not None else _default_step(stroke, min_arc))
+    if len(samples) < 2:
+        return float("inf")
+    total = samples[-1][0]
+    closed = stroke.is_closed()
+    best = float("inf")
+    for index, (arc, point) in enumerate(samples):
+        for other in range(index + 1, len(samples)):
+            along = samples[other][0] - arc
+            if closed:
+                along = min(along, total - along)
+            if along < min_arc:
+                continue
+            gap = point.distance_to(samples[other][1])
+            if gap <= touch:
+                return float("inf")
+            if gap >= best or gap * fold_ratio > along:
+                continue
+            best = gap
+            if cutoff is not None and best < cutoff:
+                return best
+    return best
+
+
+def meets_itself(stroke: Stroke) -> bool:
+    """True when the stroke crosses or touches a non neighbouring part of itself.
+
+    Exact, and separate from the walk on purpose. A crossing is a single
+    point, and a walk with any step at all can step straight over one: the
+    four is drawn as one run whose bar goes through its own stem, and
+    sampled at anything coarser than nothing it reads as a near miss of
+    whatever the step happened to leave either side of the crossing.
+    """
+    segments = stroke.segments
+    count = len(segments)
+    closed = stroke.is_closed()
+    for index in range(count):
+        for other in range(index + 2, count):
+            if closed and index == 0 and other == count - 1:
+                continue
+            if segments_cross(*segments[index], *segments[other]):
+                return True
+    return False
+
+
+def _default_step(stroke: Stroke, min_arc: float) -> float:
+    """How finely to walk a stroke that did not say."""
+    if min_arc > 0.0:
+        return min_arc / 4.0
+    return max(stroke.length() / 64.0, QUANTUM)
+
+
+def _walk(stroke: Stroke, step: float) -> list[tuple[float, Point]]:
+    """Points along the stroke with the distance walked to each."""
+    if step <= 0.0:
+        raise ValueError(f"a walking step must be positive, got {step}")
+    samples: list[tuple[float, Point]] = [(0.0, stroke.start)]
+    walked = 0.0
+    for first, second in stroke.segments:
+        span = first.distance_to(second)
+        if span < QUANTUM:
+            continue
+        pieces = max(1, math.ceil(span / step))
+        for piece in range(1, pieces + 1):
+            samples.append((walked + span * piece / pieces, first.lerp(second, piece / pieces)))
+        walked += span
+    return samples
+
+
+def closest_approach(
+    strokes: Iterable[Stroke],
+    *,
+    cutoff: float | None = None,
+    touch: float = QUANTUM,
+) -> float:
+    """The smallest gap between any two strokes that do not meet.
+
+    A pair that meets anywhere is thrown away whole, not just at the point
+    where it meets. The bar of an A lands on both diagonals on purpose, and
+    every measurement within a bar's length of that landing is small for the
+    same reason: it is one junction, drawn deliberately, and the cutter
+    filling it in is what makes an A. Keeping the pair and measuring the
+    near parts of it would report that junction as a fault, in every A, on
+    every plate, for ever.
+
+    Returns infinity for fewer than two strokes, and for a group where every
+    pair meets. A stroke is never compared with itself; that is
+    :func:`self_approach`.
     """
     ordered = list(strokes)
     best = float("inf")
     for index, left in enumerate(ordered):
         for right in ordered[index + 1 :]:
-            gap = stroke_to_stroke(left, right, cutoff=cutoff)
-            if gap < best:
-                best = gap
-                if cutoff is not None and best < cutoff:
-                    return best
+            gap = stroke_to_stroke(left, right)
+            if gap <= touch or gap >= best:
+                continue
+            best = gap
+            if cutoff is not None and best < cutoff:
+                return best
     return best
