@@ -6,5 +6,13 @@ that a stroke came from a letter.
 """
 
 from dragpoint.path.cut import Cut, CutList, PassOrder, expand_passes
+from dragpoint.path.order import OrderResult, order_cuts
 
-__all__ = ["Cut", "CutList", "PassOrder", "expand_passes"]
+__all__ = [
+    "Cut",
+    "CutList",
+    "OrderResult",
+    "PassOrder",
+    "expand_passes",
+    "order_cuts",
+]
