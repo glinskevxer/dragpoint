@@ -7,12 +7,17 @@ that a stroke came from a letter.
 
 from dragpoint.path.cut import Cut, CutList, PassOrder, expand_passes
 from dragpoint.path.order import OrderResult, order_cuts
+from dragpoint.path.plan import Move, MoveKind, Toolpath, build_toolpath
 
 __all__ = [
     "Cut",
     "CutList",
+    "Move",
+    "MoveKind",
     "OrderResult",
     "PassOrder",
+    "Toolpath",
+    "build_toolpath",
     "expand_passes",
     "order_cuts",
 ]
