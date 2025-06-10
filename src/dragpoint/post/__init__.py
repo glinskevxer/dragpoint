@@ -5,9 +5,10 @@ anything about the cut, so a plate posted two ways is the same plate.
 """
 
 from dragpoint.post import iso as _iso
+from dragpoint.post import plotter as _plotter
 from dragpoint.post.base import PostOptions, post_names, render
 
 __all__ = ["PostOptions", "post_names", "render"]
 
 # Importing the post modules is what puts them in the register.
-_POST_MODULES = (_iso,)
+_POST_MODULES = (_iso, _plotter)
