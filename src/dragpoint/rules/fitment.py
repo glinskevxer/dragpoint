@@ -78,15 +78,19 @@ def legend_overrun(check: PlateCheck) -> Iterator[Violation]:
     severity=Severity.ERROR,
 )
 def engraving_inside_area(check: PlateCheck) -> Iterator[Violation]:
-    """Marks outside the margin.
+    """Lettering outside the margin.
 
     Measured to the edge of the groove. A centreline exactly on the margin
     puts half a groove into it, and the margin exists because that is where
     the guillotine and the chipping are.
+
+    Only the lettering. The border is engraving too and it lives outside the
+    text margin on purpose, so it is checked against the plate instead, by
+    :func:`border_on_plate`.
     """
     reach = check.groove_width / 2.0
     area = check.area
-    for stroke in check.strokes:
+    for stroke in check.text.strokes():
         box = stroke.bounds().grown(reach)
         if area.contains_box(box):
             continue
@@ -159,6 +163,42 @@ def feature_on_plate(check: PlateCheck) -> Iterator[Violation]:
 
 
 @rule(
+    "border-on-plate",
+    "the border groove has to be on the plate with room to spare",
+    severity=Severity.ERROR,
+)
+def border_on_plate(check: PlateCheck) -> Iterator[Violation]:
+    """The border ring, groove and all, against the edge of the blank.
+
+    The border sits outside the text margin, so the margin says nothing
+    about it. What it must not do is run off the edge, where the groove
+    would break out of the side of the laminate.
+    """
+    border = check.plate.border_box()
+    if border is None:
+        return
+    reach = check.groove_width / 2.0
+    outline = check.plate.outline()
+    grown = border.grown(reach)
+    if outline.contains_box(grown):
+        return
+    overhang = max(
+        outline.min_x - grown.min_x,
+        outline.min_y - grown.min_y,
+        grown.max_x - outline.max_x,
+        grown.max_y - outline.max_y,
+    )
+    yield Violation(
+        rule="",
+        severity=Severity.ERROR,
+        message="the border groove runs off the edge of the plate",
+        measured=overhang,
+        limit=0.0,
+        subject=check.plate.name,
+    )
+
+
+@rule(
     "border-clearance",
     "the legend has to stay off the engraved border",
     severity=Severity.WARNING,
@@ -175,7 +215,7 @@ def border_clearance(check: PlateCheck) -> Iterator[Violation]:
         return
     reach = check.groove_width
     inner = border.grown(-reach)
-    for stroke in check.strokes:
+    for stroke in check.text.strokes():
         if inner.contains_box(stroke.bounds()):
             continue
         yield Violation(

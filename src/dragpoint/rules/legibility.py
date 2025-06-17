@@ -36,11 +36,15 @@ so how nearly they land on each other scales with the lettering and not with
 whatever cutter happens to be in the spindle.
 """
 
-FOLD_ARC_FRACTION = 0.25
+FOLD_ARC_FRACTION = 0.5
 """How far apart along a stroke two places have to be before they are compared.
 
-A quarter of the cap height. This is a sampling gate and not a limit: what
-decides whether an approach is a fold is :data:`FOLD_RATIO`.
+Half the cap height, which is about the shortest real feature a letter has.
+This is a sampling gate rather than a limit: what decides whether an
+approach is a fold is :data:`FOLD_RATIO`. Set much below a half and the
+bottom bend of a U starts answering, because the two sides of a bend that
+tight are further apart along the path than across it by more than the ratio
+and there is nothing wrong with either of them.
 """
 
 FOLD_RATIO = 1.5

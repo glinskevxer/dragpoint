@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from dragpoint.build.settings import MachineSetup
+from dragpoint.compiler.settings import MachineSetup
 from dragpoint.errors import OutOfRange
 from dragpoint.geometry.point import Point
 from dragpoint.path.cut import PassOrder

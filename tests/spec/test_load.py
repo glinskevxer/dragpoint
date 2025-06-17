@@ -10,7 +10,7 @@ from dragpoint.errors import SpecError
 from dragpoint.spec.feature import FeatureKind
 from dragpoint.spec.load import load_job, parse_job
 from dragpoint.text.fit import FitPolicy
-from dragpoint.text.layout import HAlign
+from dragpoint.text.layout import HAlign, VAlign
 
 MINIMAL = """
 [job]
@@ -39,8 +39,8 @@ def test_a_minimal_job_reads() -> None:
 def test_the_shipped_example_reads() -> None:
     job = load_job(EXAMPLE)
     assert job.name == "MCC-7"
-    assert len(job) == 6
-    assert job.piece_count == 14
+    assert len(job) == 7
+    assert job.piece_count == 15
     assert job.sheet is not None
     assert job.sheet.width == 300.0
     assert job.stock_codes() == ("ANOD-10", "LAM16-BW", "LAM32-RW")
@@ -48,7 +48,7 @@ def test_the_shipped_example_reads() -> None:
 
 def test_units_are_converted_on_the_way_in() -> None:
     job = load_job(EXAMPLE)
-    bore = job.plate("P-110").feature("bore")
+    bore = job.plate("P-111").feature("bore")
     assert bore.diameter == pytest.approx(22.225)
     assert bore.kind is FeatureKind.BORE
 
@@ -68,9 +68,9 @@ def test_a_plate_can_overrule_the_default_stock() -> None:
 
 def test_alignment_and_fit_words_are_read() -> None:
     job = load_job(EXAMPLE)
-    assert job.plate("P-120").halign is HAlign.LEFT
-    assert job.plate("P-110").fit is FitPolicy.BOTH
     assert job.plate("P-101").halign is HAlign.CENTRE
+    assert job.plate("P-110").fit is FitPolicy.BOTH
+    assert job.plate("P-111").valign is VAlign.BOTTOM
 
 
 def test_tags_come_through() -> None:

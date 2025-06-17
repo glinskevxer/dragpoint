@@ -6,7 +6,10 @@
 
 [job]
 name = "MCC-7"
-cutter = "V30-015"
+# The fine cutter, not the general purpose one. Most of this panel is at
+# 3 mm and a thirty degree cutter with a fifteen thou tip leaves a groove
+# wide enough to close the tightest letter pairs at that size.
+cutter = "V20-010"
 post = "iso"
 spring_pass = false
 notes = "Cut after the panel is drilled, the bores are the datum."
@@ -47,27 +50,39 @@ quantity = 2
 
 [[plate]]
 name = "P-110"
-size = ["80mm", "30mm"]
+size = ["100mm", "40mm"]
 lines = ["EMERGENCY STOP"]
 cap_height = "5mm"
 stock = "LAM32-RW"
-border = "2mm"
+margin = "6mm"
+border = "2.5mm"
 fit = "both"
+
+# The mushroom head sits proud of this one, so the legend goes under the
+# bore rather than round it and the plate is square.
+[[plate]]
+name = "P-111"
+size = ["60mm", "60mm"]
+lines = ["STOP"]
+cap_height = "5mm"
+stock = "LAM32-RW"
+margin = "4mm"
+valign = "bottom"
 
   [[plate.feature]]
   name = "bore"
   kind = "bore"
-  at = ["40mm", "10mm"]
+  at = ["30mm", "38mm"]
   diameter = "0.875in"
   clearance = "1.5mm"
 
+# Screwed to the door rather than clipped, so it carries its own fixing
+# holes and the legend has to stay between them.
 [[plate]]
 name = "P-120"
-size = ["100mm", "25mm"]
+size = ["120mm", "25mm"]
 lines = ["INCOMER 400V 3PH", "ISOLATE BEFORE WORKING"]
-cap_height = "2.5mm"
 tracking = "0.15mm"
-halign = "left"
 
   [[plate.feature]]
   name = "fix-left"
@@ -79,7 +94,7 @@ halign = "left"
   [[plate.feature]]
   name = "fix-right"
   kind = "hole"
-  at = ["94mm", "12.5mm"]
+  at = ["114mm", "12.5mm"]
   diameter = "4.2mm"
   clearance = "1mm"
 
