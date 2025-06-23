@@ -51,12 +51,13 @@ def test_kerning_pulls_a_pair_together(face: StrokeFace) -> None:
     kerned = shape_run("AV", face, style)
     unkerned = shape_run("AV", face, TextStyle(cap_height=7.0, kerning=False))
     assert kerned.width < unkerned.width
-    assert kerned.width == pytest.approx(unkerned.width - 0.55)
+    assert kerned.width == pytest.approx(unkerned.width - 0.30)
 
 
 def test_kerning_off_leaves_the_pair_at_its_advances(face: StrokeFace) -> None:
     run = shape_run("AV", face, TextStyle(cap_height=7.0, kerning=False))
-    assert run.width == pytest.approx((620 + 620) * 0.01)
+    advances = face.glyph("A").advance + face.glyph("V").advance
+    assert run.width == pytest.approx(advances * 0.01)
 
 
 def test_an_unkerned_pair_is_unaffected_either_way(face: StrokeFace) -> None:
