@@ -1,0 +1,158 @@
+"""Compiling a whole job."""
+
+from __future__ import annotations
+
+import pytest
+
+from dragpoint.compiler.job import compile_job
+from dragpoint.compiler.settings import MachineSetup
+from dragpoint.rules.report import Severity
+from dragpoint.spec.job import JobSpec
+from dragpoint.spec.load import load_job
+
+from .conftest import EXAMPLE, plate_spec
+
+
+def small_job(**overrides: object) -> JobSpec:
+    values: dict[str, object] = {
+        "name": "J1",
+        "plates": (
+            plate_spec(name="P-1", lines=("ONE",)),
+            plate_spec(name="P-2", lines=("TWO",), quantity=4),
+        ),
+    }
+    values.update(overrides)
+    return JobSpec(**values)  # type: ignore[arg-type]
+
+
+def test_every_plate_is_compiled() -> None:
+    made = compile_job(small_job())
+    assert len(made) == 2
+    assert [plate.name for plate in made] == ["P-1", "P-2"]
+
+
+def test_a_job_of_good_plates_is_ok() -> None:
+    made = compile_job(small_job())
+    assert made.ok
+    assert made.failed() == ()
+    assert made.worst() is None
+
+
+def test_the_report_gathers_every_plate_in_order() -> None:
+    job = JobSpec(
+        name="J1",
+        plates=(
+            plate_spec(name="P-1", lines=("ONE",)),
+            plate_spec(name="P-2", lines=("two",)),
+        ),
+    )
+    report = compile_job(job).report()
+    assert not report.clean
+    assert all(item.subject is not None and "P-2" in item.subject for item in report)
+
+
+def test_a_job_with_a_bad_plate_names_it() -> None:
+    job = JobSpec(
+        name="J1",
+        plates=(
+            plate_spec(name="P-1", lines=("ONE",)),
+            plate_spec(name="P-2", lines=("two",)),
+        ),
+    )
+    made = compile_job(job)
+    assert not made.ok
+    assert [plate.name for plate in made.failed()] == ["P-2"]
+    assert made.worst() is Severity.ERROR
+
+
+def test_plate_lookup() -> None:
+    made = compile_job(small_job())
+    assert made.plate("P-2").spec.quantity == 4
+
+
+def test_an_unknown_plate_lists_the_ones_that_are_there() -> None:
+    with pytest.raises(KeyError) as caught:
+        compile_job(small_job()).plate("P-9")
+    assert "P-1" in str(caught.value)
+
+
+def test_an_empty_job_lists_none() -> None:
+    with pytest.raises(KeyError, match="none"):
+        compile_job(JobSpec(name="J1")).plate("P-1")
+
+
+def test_a_plate_is_compiled_once_however_many_are_wanted() -> None:
+    made = compile_job(small_job())
+    one = made.plate("P-1")
+    four = made.plate("P-2")
+    assert one.spec.quantity == 1
+    assert four.spec.quantity == 4
+    assert len(four.cuts) < len(one.cuts) * 4 + len(one.cuts)
+
+
+def test_the_cut_length_counts_the_quantities() -> None:
+    made = compile_job(small_job())
+    single = made.plate("P-1").cuts.cut_length()
+    four = made.plate("P-2").cuts.cut_length()
+    assert made.cut_length() == pytest.approx(single + four * 4)
+
+
+def test_the_travel_counts_the_quantities_too() -> None:
+    made = compile_job(small_job())
+    assert made.travel_length() == pytest.approx(
+        made.plate("P-1").order.after + made.plate("P-2").order.after * 4
+    )
+
+
+def test_the_piece_count_comes_off_the_job() -> None:
+    assert compile_job(small_job()).piece_count() == 5
+
+
+def test_stock_usage_is_counted_per_code() -> None:
+    job = JobSpec(
+        name="J1",
+        plates=(
+            plate_spec(name="P-1", lines=("ONE",), quantity=2),
+            plate_spec(name="P-2", lines=("TWO",), stock="LAM32-RW", quantity=3, depth=0.4),
+            plate_spec(name="P-3", lines=("THREE",), quantity=1),
+        ),
+    )
+    assert compile_job(job).stock_usage() == {"LAM16-BW": 3, "LAM32-RW": 3}
+
+
+def test_the_setup_reaches_every_plate() -> None:
+    plain = compile_job(small_job(), setup=MachineSetup().without_optimising())
+    tidy = compile_job(small_job())
+    assert tidy.travel_length() <= plain.travel_length()
+
+
+def test_the_shipped_example_compiles_clean() -> None:
+    made = compile_job(load_job(EXAMPLE))
+    assert made.ok, str(made.report())
+    assert len(made) == 7
+    assert made.piece_count() == 15
+    assert made.cut_length() > 0.0
+
+
+def test_the_shipped_example_uses_three_stocks() -> None:
+    made = compile_job(load_job(EXAMPLE))
+    assert sorted(made.stock_usage()) == ["ANOD-10", "LAM16-BW", "LAM32-RW"]
+
+
+def test_an_empty_job_compiles_to_nothing() -> None:
+    made = compile_job(JobSpec(name="empty"))
+    assert len(made) == 0
+    assert made.ok
+    assert made.cut_length() == 0.0
+    assert made.stock_usage() == {}
+
+
+def test_str_says_what_the_job_comes_to() -> None:
+    text = str(compile_job(small_job()))
+    assert text.startswith("J1: 2 plates, 5 pieces, ")
+    assert text.endswith("ok")
+
+
+def test_str_says_how_many_plates_are_not_ok() -> None:
+    job = JobSpec(name="J1", plates=(plate_spec(name="P-1", lines=("two",)),))
+    assert "1 plates not ok" in str(compile_job(job))

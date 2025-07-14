@@ -11,7 +11,14 @@ where a plate spec, a face, a cutter and a sheet of stock are in the same
 room.
 """
 
+from dragpoint.compiler.job import EngravedJob, compile_job
 from dragpoint.compiler.plate import EngravedPlate, compile_plate
 from dragpoint.compiler.settings import MachineSetup
 
-__all__ = ["EngravedPlate", "MachineSetup", "compile_plate"]
+__all__ = [
+    "EngravedJob",
+    "EngravedPlate",
+    "MachineSetup",
+    "compile_job",
+    "compile_plate",
+]
