@@ -1,0 +1,10 @@
+"""Drawings of a plate, for people rather than for machines.
+
+A post processor writes what the machine will do. These write what the plate
+will look like, which is a different question and is answered before the
+machine is switched on.
+"""
+
+from dragpoint.draw.svg import render_svg
+
+__all__ = ["render_svg"]
