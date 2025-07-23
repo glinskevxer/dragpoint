@@ -5,6 +5,7 @@ will look like, which is a different question and is answered before the
 machine is switched on.
 """
 
+from dragpoint.draw.dxf import render_dxf
 from dragpoint.draw.svg import render_svg
 
-__all__ = ["render_svg"]
+__all__ = ["render_dxf", "render_svg"]
