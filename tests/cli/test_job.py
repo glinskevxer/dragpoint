@@ -1,0 +1,173 @@
+"""The job commands."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from click.testing import CliRunner
+
+from .conftest import EXAMPLE, run
+
+
+def test_the_shipped_schedule_checks_clean(runner: CliRunner) -> None:
+    result = run(runner, "job", "check", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "MCC-7" in result.output
+    assert "error" not in result.output
+
+
+def test_every_plate_is_reported(runner: CliRunner) -> None:
+    result = run(runner, "job", "check", str(EXAMPLE))
+    for name in ("P-101", "P-110", "P-120", "P-130"):
+        assert name in result.output
+
+
+def test_one_plate_can_be_checked_on_its_own(runner: CliRunner) -> None:
+    result = run(runner, "job", "check", str(EXAMPLE), "--plate", "P-110")
+    assert result.exit_code == 0
+    assert "P-110" in result.output
+    assert "P-101:" not in result.output
+
+
+def test_an_unknown_plate_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "job", "check", str(EXAMPLE), "--plate", "P-999")
+    assert result.exit_code == 1
+    assert "has no plate" in result.output
+
+
+def test_quiet_says_nothing(runner: CliRunner) -> None:
+    result = run(runner, "job", "check", str(EXAMPLE), "--quiet")
+    assert result.exit_code == 0
+    assert result.output.strip() == ""
+
+
+def test_a_schedule_that_is_not_there_is_a_usage_error(runner: CliRunner) -> None:
+    result = run(runner, "job", "check", "no-such-job.toml")
+    assert result.exit_code == 2
+
+
+def test_a_schedule_that_will_not_parse_is_a_message(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "bad.toml"
+    bad.write_text("this is not toml = = =", encoding="utf-8")
+    result = run(runner, "job", "check", str(bad))
+    assert result.exit_code == 1
+    assert "not readable as TOML" in result.output
+
+
+def test_a_job_posts_one_file_a_plate(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "programs"
+    result = run(runner, "job", "post", str(EXAMPLE), "--out", str(out))
+    assert result.exit_code == 0
+    written = sorted(path.name for path in out.iterdir())
+    assert written == [
+        "P-101.nc",
+        "P-102.nc",
+        "P-103.nc",
+        "P-110.nc",
+        "P-111.nc",
+        "P-120.nc",
+        "P-130.nc",
+    ]
+
+
+def test_every_posted_program_is_a_program(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "programs"
+    run(runner, "job", "post", str(EXAMPLE), "--out", str(out))
+    for path in out.iterdir():
+        text = path.read_text(encoding="utf-8")
+        assert text.startswith("%")
+        assert "M30" in text
+
+
+def test_a_posted_program_is_numbered_from_the_job(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "programs"
+    run(runner, "job", "post", str(EXAMPLE), "--out", str(out))
+    text = (out / "P-101.nc").read_text(encoding="utf-8")
+    assert "O1001 (MCC-7 P-101)" in text
+
+
+def test_a_job_with_errors_is_not_posted(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "bad.toml"
+    bad.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['20mm','10mm']\nlines=['EMERGENCY STOP']\nfit='none'\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "programs"
+    result = run(runner, "job", "post", str(bad), "--out", str(out))
+    assert result.exit_code == 1
+    assert "--force" in result.output
+    assert not out.exists()
+
+
+def test_force_posts_a_job_with_errors(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "bad.toml"
+    bad.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['20mm','10mm']\nlines=['EMERGENCY STOP']\nfit='none'\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "programs"
+    result = run(runner, "job", "post", str(bad), "--out", str(out), "--force")
+    assert result.exit_code == 1
+    assert (out / "P.nc").is_file()
+
+
+def test_a_job_is_timed_plate_by_plate(runner: CliRunner) -> None:
+    result = run(runner, "job", "time", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "P-101" in result.output
+    assert "tool changes" in result.output
+
+
+def test_the_block_time_changes_the_estimate(runner: CliRunner) -> None:
+    slow = run(runner, "job", "time", str(EXAMPLE), "--block-time", "0.05")
+    fast = run(runner, "job", "time", str(EXAMPLE), "--block-time", "0.0")
+    slow_total = float(slow.output.strip().splitlines()[-1].split()[0])
+    fast_total = float(fast.output.strip().splitlines()[-1].split()[0])
+    assert slow_total > fast_total
+
+
+def test_a_job_nests_onto_its_sheet(runner: CliRunner) -> None:
+    result = run(runner, "job", "nest", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "pieces in" in result.output
+    assert "all on" in result.output
+
+
+def test_nesting_can_be_told_not_to_rotate(runner: CliRunner) -> None:
+    turned = run(runner, "job", "nest", str(EXAMPLE))
+    straight = run(runner, "job", "nest", str(EXAMPLE), "--no-rotate")
+    assert turned.exit_code == straight.exit_code == 0
+    assert "turned" not in straight.output
+
+
+def test_a_job_with_no_sheet_cannot_be_nested(runner: CliRunner, tmp_path: Path) -> None:
+    plain = tmp_path / "plain.toml"
+    plain.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['20mm','10mm']\nlines=['A']\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "job", "nest", str(plain))
+    assert result.exit_code == 1
+    assert "does not say what sheet" in result.output
+
+
+def test_the_summary_says_what_the_job_comes_to(runner: CliRunner) -> None:
+    result = run(runner, "job", "summary", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "7 plates" in result.output
+    assert "cutters V20-010" in result.output
+    assert "LAM16-BW" in result.output
+
+
+def test_the_summary_names_the_plates_that_are_not_ok(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "bad.toml"
+    bad.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['20mm','10mm']\nlines=['EMERGENCY STOP']\nfit='none'\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "job", "summary", str(bad))
+    assert "not ok: P" in result.output
