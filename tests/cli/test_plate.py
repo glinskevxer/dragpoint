@@ -1,0 +1,168 @@
+"""The single plate commands."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from click.testing import CliRunner
+
+from .conftest import run
+
+
+def test_a_good_plate_checks_clean_and_exits_zero(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check", "PUMP 2", "RUN")
+    assert result.exit_code == 0
+    assert "no violations" in result.output
+
+
+def test_a_plate_with_an_error_exits_one(runner: CliRunner) -> None:
+    result = run(
+        runner, "plate", "check", "--fit", "none", "--size", "20x10mm", "EMERGENCY STOP PUSHBUTTON"
+    )
+    assert result.exit_code == 1
+    assert "error" in result.output
+
+
+def test_quiet_says_nothing_and_still_sets_the_code(runner: CliRunner) -> None:
+    result = run(
+        runner,
+        "plate",
+        "check",
+        "--quiet",
+        "--fit",
+        "none",
+        "--size",
+        "20x10mm",
+        "EMERGENCY STOP PUSHBUTTON",
+    )
+    assert result.exit_code == 1
+    assert result.output.strip() == ""
+
+
+def test_a_warning_does_not_fail_the_command(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check", "--cap-height", "2.7mm", "RUN")
+    assert result.exit_code == 0
+    assert "note" in result.output
+
+
+def test_the_size_option_takes_a_unit_on_the_pair(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check", "--size", "2x1in", "RUN")
+    assert result.exit_code == 0
+
+
+def test_a_size_that_is_not_a_size_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check", "--size", "wide", "RUN")
+    assert result.exit_code == 1
+    assert "not a size" in result.output
+
+
+def test_an_unknown_stock_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check", "--stock", "NOPE", "RUN")
+    assert result.exit_code == 1
+    assert "no stock called" in result.output
+
+
+def test_an_unknown_cutter_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check", "--cutter", "V99-999", "RUN")
+    assert result.exit_code == 1
+    assert "no cutter called" in result.output
+
+
+def test_a_plate_posts_to_g_code_on_standard_output(runner: CliRunner) -> None:
+    result = run(runner, "plate", "post", "RUN")
+    assert result.exit_code == 0
+    assert result.output.startswith("%")
+    assert "M30" in result.output
+
+
+def test_the_post_can_be_chosen(runner: CliRunner) -> None:
+    result = run(runner, "plate", "post", "--post", "plotter", "RUN")
+    assert result.output.startswith("IN;")
+
+
+def test_a_posted_program_carries_the_cutter_and_the_stock(runner: CliRunner) -> None:
+    result = run(runner, "plate", "post", "--name", "P-9", "RUN")
+    assert "(P-9)" in result.output
+    assert "V30-015 in LAM16-BW" in result.output
+
+
+def test_line_numbers_can_be_asked_for(runner: CliRunner) -> None:
+    assert "N10 " in run(runner, "plate", "post", "--line-numbers", "RUN").output
+
+
+def test_a_plate_with_errors_is_not_posted(runner: CliRunner) -> None:
+    result = run(
+        runner, "plate", "post", "--fit", "none", "--size", "20x10mm", "EMERGENCY STOP PUSHBUTTON"
+    )
+    assert result.exit_code == 1
+    assert "--force" in result.output
+    assert "M30" not in result.output
+
+
+def test_force_posts_it_anyway(runner: CliRunner) -> None:
+    result = run(
+        runner,
+        "plate",
+        "post",
+        "--force",
+        "--fit",
+        "none",
+        "--size",
+        "20x10mm",
+        "EMERGENCY STOP PUSHBUTTON",
+    )
+    assert "M30" in result.output
+    assert result.exit_code == 1
+
+
+def test_a_program_can_go_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "P-9.nc"
+    result = run(runner, "plate", "post", "--out", str(target), "RUN")
+    assert result.exit_code == 0
+    assert target.read_text(encoding="utf-8").startswith("%")
+
+
+def test_a_plate_draws_an_svg(runner: CliRunner) -> None:
+    result = run(runner, "plate", "draw", "RUN")
+    assert result.output.startswith("<svg")
+    assert "</svg>" in result.output
+
+
+def test_a_plate_draws_a_dxf(runner: CliRunner) -> None:
+    result = run(runner, "plate", "draw", "--format", "dxf", "RUN")
+    assert "SECTION" in result.output
+    assert result.output.rstrip().endswith("EOF")
+
+
+def test_the_travel_can_be_drawn(runner: CliRunner) -> None:
+    plain = run(runner, "plate", "draw", "PUMP 2", "RUN")
+    with_travel = run(runner, "plate", "draw", "--travel", "PUMP 2", "RUN")
+    assert "<path" not in plain.output
+    assert "<path" in with_travel.output
+
+
+def test_a_drawing_can_go_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "P-9.svg"
+    run(runner, "plate", "draw", "--out", str(target), "RUN")
+    assert target.read_text(encoding="utf-8").startswith("<svg")
+
+
+def test_a_plate_is_timed(runner: CliRunner) -> None:
+    result = run(runner, "plate", "time", "PUMP 2", "RUN")
+    assert result.exit_code == 0
+    assert "min" in result.output
+    assert "passes" in result.output
+
+
+def test_turning_the_optimiser_off_lengthens_the_travel(runner: CliRunner) -> None:
+    tidy = run(runner, "plate", "time", "PUMP 2", "RUN")
+    plain = run(runner, "plate", "time", "--no-optimise", "PUMP 2", "RUN")
+    tidy_travel = float(tidy.output.split("travel ")[1].split("mm")[0])
+    plain_travel = float(plain.output.split("travel ")[1].split("mm")[0])
+    assert tidy_travel <= plain_travel
+
+
+def test_a_blank_plate_still_works(runner: CliRunner) -> None:
+    result = run(runner, "plate", "check")
+    assert result.exit_code == 0
+    assert "0 strokes" in result.output
