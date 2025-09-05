@@ -107,6 +107,7 @@ def rule(
     """
 
     def register(function: RuleFunction) -> RuleFunction:
+        """Put the function in the register and hand it back."""
         if name in REGISTRY:
             raise ValueError(f"a rule called {name!r} is already registered")
         REGISTRY[name] = RuleDef(

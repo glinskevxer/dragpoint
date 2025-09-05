@@ -97,6 +97,7 @@ class JobTime:
 
     @property
     def minutes(self) -> float:
+        """The total in minutes."""
         return self.total / 60.0
 
     def for_plate(self, name: str) -> CycleTime:

@@ -143,6 +143,7 @@ def pass_through(function: Callable[Parameters, Result]) -> Callable[Parameters,
     """
 
     def wrapper(*args: Parameters.args, **kwargs: Parameters.kwargs) -> Result:
+        """Run the wrapped body with the error handling in place."""
         with handled():
             return function(*args, **kwargs)
 

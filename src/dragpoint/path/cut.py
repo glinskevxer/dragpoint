@@ -56,10 +56,12 @@ class Cut:
 
     @property
     def start(self) -> Point:
+        """Where the cutter goes down."""
         return self.stroke.start
 
     @property
     def end(self) -> Point:
+        """Where the cutter comes up."""
         return self.stroke.end
 
     def length(self) -> float:

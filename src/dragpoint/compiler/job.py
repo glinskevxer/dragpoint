@@ -33,6 +33,7 @@ class EngravedJob:
 
     @property
     def name(self) -> str:
+        """The job name off the schedule."""
         return self.spec.name
 
     @property

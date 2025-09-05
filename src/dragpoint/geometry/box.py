@@ -60,14 +60,17 @@ class Box:
 
     @property
     def width(self) -> float:
+        """Across, in millimetres."""
         return self.max_x - self.min_x
 
     @property
     def height(self) -> float:
+        """Up, in millimetres."""
         return self.max_y - self.min_y
 
     @property
     def centre(self) -> Point:
+        """The middle of the box."""
         return Point((self.min_x + self.max_x) / 2.0, (self.min_y + self.max_y) / 2.0)
 
     @property

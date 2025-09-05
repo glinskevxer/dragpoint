@@ -62,10 +62,12 @@ class Stroke:
 
     @property
     def start(self) -> Point:
+        """The end the cutter enters from."""
         return self.points[0]
 
     @property
     def end(self) -> Point:
+        """The end the cutter leaves from."""
         return self.points[-1]
 
     @property

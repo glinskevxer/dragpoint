@@ -45,6 +45,7 @@ class Placement:
 
     @property
     def area(self) -> float:
+        """Square millimetres of sheet this piece takes."""
         return self.width * self.height
 
     def __str__(self) -> str:

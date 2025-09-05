@@ -62,6 +62,7 @@ class EngravedPlate:
 
     @property
     def name(self) -> str:
+        """The plate name off the schedule."""
         return self.spec.name
 
     @property

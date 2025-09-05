@@ -92,6 +92,7 @@ def post(name: str, description: str, extension: str) -> Callable[[RenderFunctio
     """Register a post under ``name``."""
 
     def register(function: RenderFunction) -> RenderFunction:
+        """Put the function in the register and hand it back."""
         if name in POSTS:
             raise ValueError(f"a post called {name!r} is already registered")
         POSTS[name] = PostDef(
