@@ -72,7 +72,9 @@ def _line(violation: Violation) -> str:
         Severity.WARNING: "yellow",
         Severity.NOTE: "cyan",
     }[violation.severity]
-    head = click.style(f"{violation.severity:>7}", fg=colour)
+    # str() first. Severity is an IntEnum, so formatting it directly gives
+    # the number, and the number is not what anybody wants to read.
+    head = click.style(f"{str(violation.severity):>7}", fg=colour)
     where = f" [{violation.rule}]"
     return f"{head}{where} {violation.message}{_numbers(violation)}{_subject(violation)}"
 
