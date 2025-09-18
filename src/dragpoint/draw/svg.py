@@ -23,10 +23,19 @@ from dragpoint.spec.feature import Feature
 __all__ = ["render_svg"]
 
 OUTLINE_COLOUR = "#333333"
+"""The blank."""
+
 AREA_COLOUR = "#bbbbbb"
+"""The engraving area and the border, both drawn as a guide."""
+
 FEATURE_COLOUR = "#c05050"
+"""Holes and cutouts, in the one colour nothing else uses."""
+
 GROOVE_COLOUR = "#202020"
+"""The engraving itself, near black so the width reads."""
+
 TRAVEL_COLOUR = "#7090c0"
+"""Rapid moves, pale enough to ignore when they are not the question."""
 
 
 def render_svg(

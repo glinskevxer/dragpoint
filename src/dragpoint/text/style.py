@@ -22,8 +22,13 @@ from dragpoint.geometry.transform import Transform
 __all__ = ["TextStyle"]
 
 MIN_CONDENSE = 0.2
+"""Below a fifth a letter is a stroke with no shape left in it."""
+
 MAX_CONDENSE = 3.0
+"""Above three times it is not lettering, it is a fence."""
+
 MAX_SLANT = 45.0
+"""Past forty five degrees the stems of neighbouring letters cross."""
 
 
 @dataclass(frozen=True, slots=True)

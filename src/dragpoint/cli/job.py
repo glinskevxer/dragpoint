@@ -23,6 +23,7 @@ from dragpoint.spec.load import load_job
 __all__ = ["job"]
 
 SCHEDULE = click.argument("schedule", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+"""The schedule file every job command takes."""
 
 
 @click.group()

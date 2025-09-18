@@ -23,8 +23,13 @@ from dragpoint.units import QUANTUM
 __all__ = ["JobSpec", "Sheet"]
 
 DEFAULT_CUTTER = "V30-015"
+"""What is in the spindle unless the job says otherwise."""
+
 DEFAULT_SHEET_MARGIN = 5.0
+"""Millimetres round the sheet the clamps sit on."""
+
 DEFAULT_KERF = 1.5
+"""Millimetres between nested pieces for the parting cut."""
 
 
 @dataclass(frozen=True, slots=True)

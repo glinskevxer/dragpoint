@@ -20,6 +20,7 @@ from dragpoint.cli.plate import plate
 __all__ = ["main"]
 
 CONTEXT = {"help_option_names": ["-h", "--help"], "max_content_width": 100}
+"""Click settings. The width is the one a shop floor terminal is."""
 
 
 @click.group(context_settings=CONTEXT)

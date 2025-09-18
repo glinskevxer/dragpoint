@@ -28,8 +28,13 @@ from dragpoint.units import QUANTUM
 __all__ = ["PlateSpec"]
 
 DEFAULT_FACE = "panelgothic"
+"""The house face, used unless a plate names another."""
+
 DEFAULT_MARGIN = 2.0
+"""Millimetres round the plate that nothing is engraved in."""
+
 DEFAULT_CAP_HEIGHT = 3.0
+"""Millimetres of capital height, which is most of the legend work."""
 
 
 @dataclass(frozen=True, slots=True)

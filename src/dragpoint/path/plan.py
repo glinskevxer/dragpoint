@@ -33,9 +33,16 @@ from dragpoint.units import QUANTUM
 __all__ = ["Move", "MoveKind", "Toolpath", "build_toolpath"]
 
 DEFAULT_SAFE = 5.0
+"""Millimetres above the work, high enough to cross a clamp."""
+
 DEFAULT_CLEARANCE = 0.5
+"""Millimetres above the work for a hop between two nearby cuts."""
+
 DEFAULT_HOP_LIMIT = 25.0
+"""Millimetres of travel past which the head goes up to the safe height."""
+
 ORIGIN = Point(0.0, 0.0)
+"""Where the head is taken to be before the first move."""
 
 
 class MoveKind(StrEnum):

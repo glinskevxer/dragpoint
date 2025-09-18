@@ -46,7 +46,10 @@ ROOT = SOURCE.parent
 """The checkout."""
 
 TESTS = ROOT / "tests"
+"""Where the test modules live."""
+
 DOCS = ROOT / "docs"
+"""Where the generators write."""
 
 
 @dataclass(frozen=True, slots=True)

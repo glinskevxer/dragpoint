@@ -28,6 +28,7 @@ from dragpoint.path.cut import Cut, CutList
 __all__ = ["OrderResult", "order_cuts", "travel_of"]
 
 ORIGIN = Point(0.0, 0.0)
+"""Where the head is taken to be before the first cut."""
 
 
 @dataclass(frozen=True, slots=True)

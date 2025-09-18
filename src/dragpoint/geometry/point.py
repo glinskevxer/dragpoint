@@ -86,6 +86,7 @@ class Point:
 
 
 ORIGIN = Point(0.0, 0.0)
+"""The corner everything on a plate is measured from."""
 
 
 def centroid(points: Iterable[Point]) -> Point:
