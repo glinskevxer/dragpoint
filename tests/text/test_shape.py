@@ -113,14 +113,14 @@ def test_the_ink_box_is_narrower_than_the_advance_width(face: StrokeFace) -> Non
 
 
 def test_a_missing_glyph_comes_out_as_the_fallback(face: StrokeFace) -> None:
-    run = shape_run("a", face, TextStyle(cap_height=3.0))
+    run = shape_run("°", face, TextStyle(cap_height=3.0))
     assert run.placed[0].glyph.name == "question"
 
 
 def test_a_face_without_a_fallback_raises(face: StrokeFace) -> None:
     bare = StrokeFace(name="bare", metrics=face.metrics, glyphs=dict(face.glyphs))
     with pytest.raises(MissingGlyph):
-        shape_run("a", bare, TextStyle(cap_height=3.0))
+        shape_run("°", bare, TextStyle(cap_height=3.0))
 
 
 def test_a_newline_is_not_this_layer_s_problem(face: StrokeFace) -> None:

@@ -43,7 +43,7 @@ def test_the_report_gathers_every_plate_in_order() -> None:
         name="J1",
         plates=(
             plate_spec(name="P-1", lines=("ONE",)),
-            plate_spec(name="P-2", lines=("two",)),
+            plate_spec(name="P-2", lines=("45°C",)),
         ),
     )
     report = compile_job(job).report()
@@ -56,7 +56,7 @@ def test_a_job_with_a_bad_plate_names_it() -> None:
         name="J1",
         plates=(
             plate_spec(name="P-1", lines=("ONE",)),
-            plate_spec(name="P-2", lines=("two",)),
+            plate_spec(name="P-2", lines=("45°C",)),
         ),
     )
     made = compile_job(job)
@@ -154,5 +154,5 @@ def test_str_says_what_the_job_comes_to() -> None:
 
 
 def test_str_says_how_many_plates_are_not_ok() -> None:
-    job = JobSpec(name="J1", plates=(plate_spec(name="P-1", lines=("two",)),))
+    job = JobSpec(name="J1", plates=(plate_spec(name="P-1", lines=("45°C",)),))
     assert "1 plates not ok" in str(compile_job(job))

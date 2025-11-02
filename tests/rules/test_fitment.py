@@ -25,19 +25,19 @@ def test_a_legend_the_face_can_draw_reports_nothing() -> None:
 
 
 def test_a_character_the_face_cannot_draw_is_named() -> None:
-    found = list(legend_missing_glyph(build_check(("run",))))
+    found = list(legend_missing_glyph(build_check(("45°C",))))
     assert len(found) == 1
-    assert "'r'" in found[0].message
+    assert "'°'" in found[0].message
     assert found[0].subject == "P-101 line 1"
 
 
 def test_every_offender_on_a_line_is_named_once_in_order() -> None:
-    found = list(legend_missing_glyph(build_check(("aXbXa",))))
-    assert found[0].message.endswith("'a' 'b'")
+    found = list(legend_missing_glyph(build_check(("°XµX°",))))
+    assert found[0].message.endswith("'°' 'µ'")
 
 
 def test_each_line_is_reported_separately() -> None:
-    found = list(legend_missing_glyph(build_check(("ok", "OK", "no"))))
+    found = list(legend_missing_glyph(build_check(("45°", "OK", "3µF"))))
     assert [item.subject for item in found] == ["P-101 line 1", "P-101 line 3"]
 
 

@@ -174,7 +174,7 @@ def test_the_compiler_never_quietly_fixes_anything() -> None:
 
 
 def test_the_rules_can_be_narrowed() -> None:
-    spec = plate_spec(lines=("run",))
+    spec = plate_spec(lines=("45°C",))
     everything = compile_plate(spec)
     narrowed = compile_plate(spec, selection=RuleSelection(only=frozenset({"stroke-merge"})))
     assert not everything.report.by_rule("legend-missing-glyph").clean

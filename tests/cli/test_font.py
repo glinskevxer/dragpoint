@@ -62,9 +62,9 @@ def test_the_measurement_takes_units(runner: CliRunner) -> None:
 
 
 def test_characters_the_face_cannot_draw_are_named(runner: CliRunner) -> None:
-    result = run(runner, "font", "measure", "pump")
+    result = run(runner, "font", "measure", "45°C")
     assert "cannot draw" in result.output
-    assert "'p'" in result.output
+    assert "'°'" in result.output
 
 
 def test_a_width_asks_the_fitter_what_it_would_do(runner: CliRunner) -> None:
