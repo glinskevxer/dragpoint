@@ -42,7 +42,14 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class PlateCheck:
-    """Everything known about one plate once it has been laid out."""
+    """Everything known about one plate once it has been laid out.
+
+    ``strokes`` is everything that gets cut. ``text_strokes`` is the
+    lettering on its own, which is not the same thing: the border is cut and
+    is not lettering, and a rule about where the legend may sit would put a
+    border in the wrong place every time. They are kept apart because a
+    legend bent round an arc is no longer derivable from the layout either.
+    """
 
     plate: PlateSpec
     face: StrokeFace
@@ -50,6 +57,7 @@ class PlateCheck:
     fit: FitResult
     text: LaidOutText
     strokes: tuple[Stroke, ...]
+    text_strokes: tuple[Stroke, ...]
     cutter: Cutter
     stock: Material
     depth: float

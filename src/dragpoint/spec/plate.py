@@ -18,7 +18,9 @@ import math
 from dataclasses import dataclass, field
 
 from dragpoint.errors import OutOfRange
+from dragpoint.geometry.arc import ArcMap
 from dragpoint.geometry.box import Box
+from dragpoint.geometry.point import Point
 from dragpoint.spec.feature import Feature
 from dragpoint.text.fit import FitPolicy
 from dragpoint.text.layout import HAlign, VAlign
@@ -35,6 +37,9 @@ DEFAULT_MARGIN = 2.0
 
 DEFAULT_CAP_HEIGHT = 3.0
 """Millimetres of capital height, which is most of the legend work."""
+
+DEFAULT_ARC_SWEEP = 180.0
+"""Degrees a legend on an arc may take up before it is too far round."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +75,12 @@ class PlateSpec:
     cutter: str | None = None
     quantity: int = 1
     border: float | None = None
+    arc_radius: float | None = None
+    arc_centre: Point | None = None
+    arc_start: float = 90.0
+    arc_sweep: float = DEFAULT_ARC_SWEEP
+    arc_clockwise: bool = False
+    arc_inward: bool = False
     notes: str = ""
     tags: frozenset[str] = field(default_factory=frozenset)
 
@@ -103,6 +114,10 @@ class PlateSpec:
                     0.0,
                     min(self.width, self.height) / 2.0,
                 )
+        if self.arc_radius is not None and self.arc_radius <= 0.0:
+            raise OutOfRange(f"{self.name} arc radius", self.arc_radius, QUANTUM, math.inf)
+        if not 0.0 < self.arc_sweep <= 360.0:
+            raise OutOfRange(f"{self.name} arc sweep", self.arc_sweep, QUANTUM, 360.0)
         for line in self.lines:
             if "\n" in line:
                 raise ValueError(f"{self.name} has a line with a newline in it")
@@ -120,6 +135,36 @@ class PlateSpec:
         if self.border is None:
             return None
         return self.outline().grown(-self.border)
+
+    def arc(self) -> ArcMap | None:
+        """The arc the legend is set round, or ``None`` for straight text.
+
+        With no centre given the arc is centred on the plate, which is what
+        a rotary switch legend wants: the bore is in the middle and the
+        words go round it.
+        """
+        if self.arc_radius is None:
+            return None
+        centre = self.arc_centre if self.arc_centre is not None else self.outline().centre
+        return ArcMap(
+            centre=centre,
+            radius=self.arc_radius,
+            start=self.arc_start,
+            clockwise=self.arc_clockwise,
+            outward=not self.arc_inward,
+        )
+
+    def fit_limit(self) -> float:
+        """How wide the legend may be before the fitter has to do something.
+
+        Straight text is limited by the engraving area. Text on an arc is
+        limited by how far round it is allowed to go, which is a length on
+        the arc and has nothing to do with how wide the plate is.
+        """
+        arc = self.arc()
+        if arc is None:
+            return self.area().width
+        return arc.radius * math.radians(self.arc_sweep)
 
     def style(self) -> TextStyle:
         """The text style this plate asks for, before any fitting."""

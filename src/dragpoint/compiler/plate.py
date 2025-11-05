@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from dragpoint.compiler.settings import MachineSetup
 from dragpoint.font.face import StrokeFace
 from dragpoint.font.library import load_face
+from dragpoint.geometry.arc import bend
+from dragpoint.geometry.box import Box
 from dragpoint.geometry.stroke import Stroke, join_runs
 from dragpoint.path.cut import CutList, expand_passes
 from dragpoint.path.order import OrderResult, order_cuts
@@ -31,11 +33,12 @@ from dragpoint.rules.report import Report
 from dragpoint.spec.job import JobSpec
 from dragpoint.spec.plate import PlateSpec
 from dragpoint.text.fit import FitResult, fit_lines
-from dragpoint.text.layout import LaidOutText, layout_lines
+from dragpoint.text.layout import LaidOutText, VAlign, layout_lines
 from dragpoint.text.style import TextStyle
 from dragpoint.tool.cutter import Cutter, catalogue_cutter
 from dragpoint.tool.material import Material, material
 from dragpoint.tool.passes import PassPlan, plan_passes
+from dragpoint.units import QUANTUM
 
 __all__ = ["EngravedPlate", "compile_plate"]
 
@@ -50,6 +53,7 @@ class EngravedPlate:
     fit: FitResult
     text: LaidOutText
     strokes: tuple[Stroke, ...]
+    text_strokes: tuple[Stroke, ...]
     runs: tuple[Stroke, ...]
     cutter: Cutter
     stock: Material
@@ -84,6 +88,7 @@ class EngravedPlate:
             fit=self.fit,
             text=self.text,
             strokes=self.strokes,
+            text_strokes=self.text_strokes,
             cutter=self.cutter,
             stock=self.stock,
             depth=self.depth,
@@ -109,6 +114,44 @@ def _single(plan: PassPlan) -> PassPlan:
         groove_width=plan.groove_width,
         has_spring_pass=False,
     )
+
+
+def _lay_out(spec: PlateSpec, face: StrokeFace, style: TextStyle) -> LaidOutText:
+    """Lay the lines out, either in the engraving area or ready to be bent.
+
+    Text that is going to be bent is laid out about the origin instead: x
+    zero is the middle of the block and the first baseline is y zero, which
+    is exactly what the arc map expects to be handed. Putting it in the
+    engraving area first and bending afterwards would bend the alignment as
+    well, and a centred legend would come out somewhere else entirely.
+    """
+    if spec.arc() is None:
+        return layout_lines(
+            spec.lines,
+            face,
+            style,
+            box=spec.area(),
+            halign=spec.halign,
+            valign=spec.valign,
+        )
+    natural = layout_lines(spec.lines, face, style)
+    half = max(natural.widest, QUANTUM) / 2.0
+    return layout_lines(
+        spec.lines,
+        face,
+        style,
+        box=Box(-half, -1.0, half, 0.0),
+        halign=spec.halign,
+        valign=VAlign.BASELINE,
+    )
+
+
+def _text_strokes(spec: PlateSpec, text: LaidOutText) -> tuple[Stroke, ...]:
+    """The lettering, bent round the arc when the plate asks for one."""
+    arc = spec.arc()
+    if arc is None:
+        return tuple(text.strokes())
+    return tuple(bend(stroke, arc) for stroke in text.strokes())
 
 
 def _border_strokes(spec: PlateSpec) -> list[Stroke]:
@@ -142,18 +185,11 @@ def compile_plate(
     if depth is None:
         depth = stock.nominal_depth
 
-    area = spec.area()
-    fit = fit_lines(spec.lines, face, spec.style(), area.width, spec.fit)
-    text = layout_lines(
-        spec.lines,
-        face,
-        fit.style,
-        box=area,
-        halign=spec.halign,
-        valign=spec.valign,
-    )
+    fit = fit_lines(spec.lines, face, spec.style(), spec.fit_limit(), spec.fit)
+    text = _lay_out(spec, face, fit.style)
+    lettering = _text_strokes(spec, text)
 
-    drawn = tuple(text.strokes()) + tuple(_border_strokes(spec))
+    drawn = lettering + tuple(_border_strokes(spec))
     runs = tuple(join_runs(list(drawn)))
     passes = plan_passes(depth, stock, cutter, spring_pass=owner.spring_pass)
 
@@ -189,6 +225,7 @@ def compile_plate(
         fit=fit,
         text=text,
         strokes=drawn,
+        text_strokes=lettering,
         cutter=cutter,
         stock=stock,
         depth=depth,
@@ -201,6 +238,7 @@ def compile_plate(
         fit=fit,
         text=text,
         strokes=drawn,
+        text_strokes=lettering,
         runs=runs,
         cutter=cutter,
         stock=stock,

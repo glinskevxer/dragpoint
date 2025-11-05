@@ -86,11 +86,13 @@ def engraving_inside_area(check: PlateCheck) -> Iterator[Violation]:
 
     Only the lettering. The border is engraving too and it lives outside the
     text margin on purpose, so it is checked against the plate instead, by
-    :func:`border_on_plate`.
+    :func:`border_on_plate`. The lettering is taken from the check rather
+    than from the layout, because a legend set round an arc has been bent
+    since the layout was made.
     """
     reach = check.groove_width / 2.0
     area = check.area
-    for stroke in check.text.strokes():
+    for stroke in check.text_strokes:
         box = stroke.bounds().grown(reach)
         if area.contains_box(box):
             continue
@@ -215,7 +217,7 @@ def border_clearance(check: PlateCheck) -> Iterator[Violation]:
         return
     reach = check.groove_width
     inner = border.grown(-reach)
-    for stroke in check.text.strokes():
+    for stroke in check.text_strokes:
         if inner.contains_box(stroke.bounds()):
             continue
         yield Violation(

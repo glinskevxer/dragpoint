@@ -54,6 +54,7 @@ def build_check(
         fit=fit,
         text=text,
         strokes=text.strokes(),
+        text_strokes=text.strokes(),
         cutter=tool,
         stock=sheet,
         depth=cut_depth,

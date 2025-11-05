@@ -27,8 +27,30 @@ from dragpoint.units import parse_length
 
 __all__ = ["load_job", "parse_job"]
 
-_PLATE_LENGTHS = ("cap_height", "tracking", "word_space", "line_pitch", "margin", "border", "depth")
-_PLATE_PLAIN = ("face", "stock", "condense", "slant", "kerning", "mirror", "quantity", "notes")
+_PLATE_LENGTHS = (
+    "cap_height",
+    "tracking",
+    "word_space",
+    "line_pitch",
+    "margin",
+    "border",
+    "depth",
+    "arc_radius",
+)
+_PLATE_PLAIN = (
+    "face",
+    "stock",
+    "condense",
+    "slant",
+    "kerning",
+    "mirror",
+    "quantity",
+    "notes",
+    "arc_start",
+    "arc_sweep",
+    "arc_clockwise",
+    "arc_inward",
+)
 
 
 def load_job(path: Path | str) -> JobSpec:
@@ -137,6 +159,7 @@ def _read_plate(
             "cutter",
             "feature",
             "tags",
+            "arc_centre",
             *_PLATE_LENGTHS,
             *_PLATE_PLAIN,
         },
@@ -159,6 +182,9 @@ def _read_plate(
         "fit": _read_enum(source, where, merged, "fit", FitPolicy, FitPolicy.CONDENSE),
         "features": features,
         "cutter": _optional_str(merged, "cutter"),
+        "arc_centre": _read_point(source, where, merged, "arc_centre")
+        if "arc_centre" in merged
+        else None,
         "tags": frozenset(str(tag) for tag in merged.get("tags", ())),
     }
     for key in _PLATE_LENGTHS:
@@ -248,12 +274,12 @@ def _read_feature(source: str, plate_where: str, index: int, table: dict[str, An
         raise SpecError(source, where, str(exc)) from exc
 
 
-def _read_point(source: str, where: str, table: dict[str, Any]) -> Point:
-    """``at = [x, y]``."""
-    raw = table.get("at")
+def _read_point(source: str, where: str, table: dict[str, Any], key: str = "at") -> Point:
+    """``at = [x, y]``, or any other key that holds a pair of lengths."""
+    raw = table.get(key)
     if not isinstance(raw, list) or len(raw) != 2:
-        raise SpecError(source, where, "at takes exactly two lengths")
-    return Point(_length(source, where, "at", raw[0]), _length(source, where, "at", raw[1]))
+        raise SpecError(source, where, f"{key} takes exactly two lengths")
+    return Point(_length(source, where, key, raw[0]), _length(source, where, key, raw[1]))
 
 
 def _table(source: str, where: str, value: Any) -> dict[str, Any]:

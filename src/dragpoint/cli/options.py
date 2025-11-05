@@ -44,6 +44,11 @@ def plate_options(command: Command) -> Command:
         click.option("--hop", default="25mm", show_default=True, help="Lift high above this move."),
         click.option("--clearance", default="0.5mm", show_default=True, help="Hop height."),
         click.option("--safe", default="5mm", show_default=True, help="Full retract height."),
+        click.option("--arc-inward", is_flag=True, help="Letters face the middle."),
+        click.option("--arc-clockwise", is_flag=True, help="Run the legend the other way."),
+        click.option("--arc-sweep", default=180.0, show_default=True, help="Degrees allowed."),
+        click.option("--arc-start", default=90.0, show_default=True, help="Degrees at the middle."),
+        click.option("--arc", "arc_radius", default=None, help="Set the legend round this radius."),
         click.option("--cutter", default=None, help="Cutter name, else the shop default."),
         click.option("--depth", default=None, help="Cut depth, else the stock nominal."),
         click.option("--border", default=None, help="Engraved border inset."),
@@ -118,6 +123,13 @@ def plate_from_options(options: dict[str, Any]) -> PlateSpec:
         border=None if options["border"] is None else parse_length(str(options["border"])),
         depth=None if options["depth"] is None else parse_length(str(options["depth"])),
         cutter=None if options["cutter"] is None else str(options["cutter"]),
+        arc_radius=(
+            None if options["arc_radius"] is None else parse_length(str(options["arc_radius"]))
+        ),
+        arc_start=float(options["arc_start"]),
+        arc_sweep=float(options["arc_sweep"]),
+        arc_clockwise=bool(options["arc_clockwise"]),
+        arc_inward=bool(options["arc_inward"]),
     )
 
 

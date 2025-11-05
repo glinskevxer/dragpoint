@@ -39,6 +39,11 @@ def defaults(**overrides: Any) -> dict[str, Any]:
         "no_optimise": False,
         "pass_order": "by-pass",
         "rapid_rate": 6000.0,
+        "arc_radius": None,
+        "arc_start": 90.0,
+        "arc_sweep": 180.0,
+        "arc_clockwise": False,
+        "arc_inward": False,
     }
     values.update(overrides)
     return values
@@ -136,3 +141,24 @@ def test_the_heights_take_units() -> None:
     assert setup.safe == pytest.approx(12.7)
     assert setup.clearance == pytest.approx(0.508)
     assert setup.hop_limit == pytest.approx(50.8)
+
+
+def test_a_plate_with_no_arc_option_has_no_arc() -> None:
+    assert plate_from_options(defaults()).arc() is None
+
+
+def test_the_arc_options_come_through() -> None:
+    spec = plate_from_options(
+        defaults(size="60x60mm", arc_radius="0.75in", arc_start=45.0, arc_clockwise=True)
+    )
+    assert spec.arc_radius == pytest.approx(19.05)
+    assert spec.arc_start == 45.0
+    assert spec.arc_clockwise
+    assert spec.arc() is not None
+
+
+def test_lettering_can_be_asked_to_face_inward() -> None:
+    spec = plate_from_options(defaults(size="60x60mm", arc_radius="20mm", arc_inward=True))
+    arc = spec.arc()
+    assert arc is not None
+    assert not arc.outward

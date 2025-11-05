@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from dragpoint.compiler.plate import compile_plate
 from dragpoint.compiler.settings import MachineSetup
+from dragpoint.geometry.point import Point
 from dragpoint.path.cut import PassOrder
 from dragpoint.rules.check import RuleSelection
 from dragpoint.rules.report import Severity
@@ -210,3 +213,135 @@ def test_a_plate_with_a_stock_that_is_not_on_the_rack_says_so() -> None:
 def test_a_plate_with_a_cutter_that_is_not_in_the_crib_says_so() -> None:
     with pytest.raises(KeyError, match="no cutter"):
         compile_plate(plate_spec(cutter="V99-999"))
+
+
+def arc_spec(**overrides: object) -> PlateSpec:
+    values: dict[str, object] = {
+        "name": "P-200",
+        "width": 60.0,
+        "height": 60.0,
+        "stock": "LAM16-BW",
+        "lines": ("AUTO",),
+        "arc_radius": 20.0,
+    }
+    values.update(overrides)
+    return PlateSpec(**values)  # type: ignore[arg-type]
+
+
+def test_a_plate_without_an_arc_has_no_arc() -> None:
+    assert PlateSpec(name="P", width=60.0, height=20.0, stock="LAM16-BW").arc() is None
+
+
+def test_the_arc_is_centred_on_the_plate_unless_told_otherwise() -> None:
+    arc = arc_spec().arc()
+    assert arc is not None
+    assert arc.centre == Point(30.0, 30.0)
+
+
+def test_the_arc_centre_can_be_given() -> None:
+    arc = arc_spec(arc_centre=Point(10.0, 40.0)).arc()
+    assert arc is not None
+    assert arc.centre == Point(10.0, 40.0)
+
+
+def test_the_fit_limit_is_the_arc_length_and_not_the_plate() -> None:
+    plate = arc_spec(arc_sweep=90.0)
+    assert plate.fit_limit() == pytest.approx(20.0 * math.pi / 2.0)
+
+
+def test_a_straight_plate_is_limited_by_its_engraving_area() -> None:
+    plate = PlateSpec(name="P", width=60.0, height=20.0, stock="LAM16-BW")
+    assert plate.fit_limit() == plate.area().width
+
+
+@pytest.mark.parametrize("radius", [0.0, -1.0])
+def test_an_arc_with_no_radius_is_refused(radius: float) -> None:
+    with pytest.raises(Exception, match="arc radius"):
+        arc_spec(arc_radius=radius)
+
+
+@pytest.mark.parametrize("sweep", [0.0, -10.0, 400.0])
+def test_a_sweep_that_is_not_a_sweep_is_refused(sweep: float) -> None:
+    with pytest.raises(Exception, match="arc sweep"):
+        arc_spec(arc_sweep=sweep)
+
+
+def test_a_bent_legend_sits_on_the_arc() -> None:
+    made = compile_plate(arc_spec())
+    arc = made.spec.arc()
+    assert arc is not None
+    reaches = [
+        arc.centre.distance_to(point) for stroke in made.text_strokes for point in stroke.points
+    ]
+    assert min(reaches) >= arc.radius - 0.001
+    assert max(reaches) <= arc.radius + made.style.cap_height + 0.001
+
+
+def test_a_bent_legend_is_centred_on_the_start_angle() -> None:
+    made = compile_plate(arc_spec(arc_start=90.0))
+    box = made.text_strokes[0].bounds()
+    for stroke in made.text_strokes[1:]:
+        box = box.union(stroke.bounds())
+    assert box.centre.x == pytest.approx(30.0, abs=0.6)
+    assert box.max_y > 40.0
+
+
+def test_the_start_angle_moves_the_legend_round() -> None:
+    top = compile_plate(arc_spec(arc_start=90.0))
+    bottom = compile_plate(arc_spec(arc_start=270.0, arc_clockwise=True))
+    top_box = top.text_strokes[0].bounds()
+    bottom_box = bottom.text_strokes[0].bounds()
+    assert top_box.min_y > bottom_box.max_y
+
+
+def test_bending_makes_more_points_than_the_straight_layout() -> None:
+    straight = compile_plate(arc_spec(arc_radius=None, height=20.0))
+    bent = compile_plate(arc_spec())
+    straight_points = sum(len(stroke) for stroke in straight.text_strokes)
+    bent_points = sum(len(stroke) for stroke in bent.text_strokes)
+    assert bent_points > straight_points
+
+
+def test_a_tighter_radius_curves_the_letters_more() -> None:
+    wide = compile_plate(arc_spec(arc_radius=25.0))
+    tight = compile_plate(arc_spec(arc_radius=10.0, height=40.0))
+    wide_span = wide.text_strokes[0].bounds().width
+    tight_span = tight.text_strokes[0].bounds().width
+    assert tight_span != wide_span
+
+
+def test_the_lettering_is_kept_apart_from_everything_that_is_cut() -> None:
+    made = compile_plate(arc_spec(border=2.0, margin=3.0))
+    assert len(made.strokes) == len(made.text_strokes) + 1
+    assert all(stroke in made.strokes for stroke in made.text_strokes)
+
+
+def test_the_rules_look_at_the_bent_lettering() -> None:
+    made = compile_plate(arc_spec())
+    check = made.check()
+    assert check.text_strokes == made.text_strokes
+    assert check.text_strokes != tuple(check.text.strokes())
+
+
+def test_a_legend_round_a_bore_stays_on_the_plate() -> None:
+    made = compile_plate(arc_spec())
+    assert made.ok, str(made.report)
+
+
+def test_a_legend_too_far_round_is_pulled_in_by_the_fitter() -> None:
+    made = compile_plate(arc_spec(lines=("EMERGENCY STOP PUSHBUTTON",), arc_sweep=90.0))
+    assert made.style.condense < 1.0
+
+
+def test_lettering_can_face_inward() -> None:
+    outward = compile_plate(arc_spec())
+    inward = compile_plate(arc_spec(arc_inward=True))
+    arc = outward.spec.arc()
+    assert arc is not None
+    out_reach = max(
+        arc.centre.distance_to(point) for stroke in outward.text_strokes for point in stroke.points
+    )
+    in_reach = max(
+        arc.centre.distance_to(point) for stroke in inward.text_strokes for point in stroke.points
+    )
+    assert in_reach < out_reach

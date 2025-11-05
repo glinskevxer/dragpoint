@@ -146,6 +146,11 @@ Compile a plate and print what the rules say about it.
 | `--border` | Engraved border inset. |  |
 | `--depth` | Cut depth, else the stock nominal. |  |
 | `--cutter` | Cutter name, else the shop default. |  |
+| `--arc` | Set the legend round this radius. |  |
+| `--arc-start` | Degrees at the middle. | `90.0` |
+| `--arc-sweep` | Degrees allowed. | `180.0` |
+| `--arc-clockwise` | Run the legend the other way. |  |
+| `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -176,6 +181,11 @@ Draw one plate as an SVG preview or a DXF.
 | `--border` | Engraved border inset. |  |
 | `--depth` | Cut depth, else the stock nominal. |  |
 | `--cutter` | Cutter name, else the shop default. |  |
+| `--arc` | Set the legend round this radius. |  |
+| `--arc-start` | Degrees at the middle. | `90.0` |
+| `--arc-sweep` | Degrees allowed. | `180.0` |
+| `--arc-clockwise` | Run the legend the other way. |  |
+| `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -209,6 +219,11 @@ Post one plate to a machine program.
 | `--border` | Engraved border inset. |  |
 | `--depth` | Cut depth, else the stock nominal. |  |
 | `--cutter` | Cutter name, else the shop default. |  |
+| `--arc` | Set the legend round this radius. |  |
+| `--arc-start` | Degrees at the middle. | `90.0` |
+| `--arc-sweep` | Degrees allowed. | `180.0` |
+| `--arc-clockwise` | Run the legend the other way. |  |
+| `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -243,6 +258,11 @@ Estimate how long one plate takes.
 | `--border` | Engraved border inset. |  |
 | `--depth` | Cut depth, else the stock nominal. |  |
 | `--cutter` | Cutter name, else the shop default. |  |
+| `--arc` | Set the legend round this radius. |  |
+| `--arc-start` | Degrees at the middle. | `90.0` |
+| `--arc-sweep` | Degrees allowed. | `180.0` |
+| `--arc-clockwise` | Run the legend the other way. |  |
+| `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |

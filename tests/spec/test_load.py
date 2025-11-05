@@ -203,3 +203,33 @@ def test_the_source_name_comes_back_in_the_message() -> None:
     with pytest.raises(SpecError) as caught:
         parse_job("[job]\n", "schedule.toml")
     assert str(caught.value).startswith("schedule.toml [job]")
+
+
+def test_an_arc_reads_off_a_schedule() -> None:
+    text = MINIMAL + "\narc_radius = '20mm'\narc_start = 45.0\narc_clockwise = true\n"
+    plate = parse_job(text).plate("P-1")
+    assert plate.arc_radius == 20.0
+    assert plate.arc_start == 45.0
+    assert plate.arc_clockwise
+
+
+def test_an_arc_centre_reads_as_a_pair_of_lengths() -> None:
+    text = MINIMAL + "\narc_radius = '20mm'\narc_centre = ['30mm', '30mm']\n"
+    plate = parse_job(text).plate("P-1")
+    assert plate.arc_centre is not None
+    assert plate.arc_centre.x == 30.0
+
+
+def test_an_arc_centre_with_one_coordinate_is_refused() -> None:
+    text = MINIMAL + "\narc_radius = '20mm'\narc_centre = ['30mm']\n"
+    with pytest.raises(SpecError, match="arc_centre takes exactly two lengths"):
+        parse_job(text)
+
+
+def test_a_plate_with_no_arc_keys_has_no_arc() -> None:
+    assert parse_job(MINIMAL).plate("P-1").arc() is None
+
+
+def test_an_arc_sweep_reads_off_a_schedule() -> None:
+    text = MINIMAL + "\narc_radius = '20mm'\narc_sweep = 90.0\n"
+    assert parse_job(text).plate("P-1").arc_sweep == 90.0
