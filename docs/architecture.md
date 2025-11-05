@@ -29,7 +29,7 @@ import that would break it fails the build rather than the review.
 
 ## What is in each layer
 
-- **`dragpoint.geometry`** `box`, `nearness`, `point`, `stroke`, `transform`
+- **`dragpoint.geometry`** `arc`, `box`, `nearness`, `point`, `stroke`, `transform`
 - **`dragpoint.font`** `face`, `glyph`, `library`, `parse`, `write`
 - **`dragpoint.text`** `fit`, `layout`, `shape`, `style`
 - **`dragpoint.tool`** `cutter`, `material`, `passes`

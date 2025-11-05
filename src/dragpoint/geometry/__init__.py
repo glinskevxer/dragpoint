@@ -5,9 +5,10 @@ not of a point, and mixing the two is how a toolpath ends up with a Z value
 buried inside a glyph outline where no layout code can reach it.
 """
 
+from dragpoint.geometry.arc import ArcMap, bend
 from dragpoint.geometry.box import Box
 from dragpoint.geometry.point import Point
 from dragpoint.geometry.stroke import Stroke, join_runs
 from dragpoint.geometry.transform import Transform
 
-__all__ = ["Box", "Point", "Stroke", "Transform", "join_runs"]
+__all__ = ["ArcMap", "Box", "Point", "Stroke", "Transform", "bend", "join_runs"]
