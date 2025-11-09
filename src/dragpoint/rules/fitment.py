@@ -34,7 +34,7 @@ def legend_missing_glyph(check: PlateCheck) -> Iterator[Violation]:
     from the machine with a question mark on it, and the operator does not
     find out until the plate is on the panel.
     """
-    for number, line in enumerate(check.plate.lines, start=1):
+    for number, line in enumerate(check.lines, start=1):
         missing = check.face.missing(line)
         if not missing:
             continue

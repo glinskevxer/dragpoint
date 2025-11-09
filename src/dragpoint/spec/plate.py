@@ -75,6 +75,7 @@ class PlateSpec:
     cutter: str | None = None
     quantity: int = 1
     border: float | None = None
+    wrap: bool = False
     arc_radius: float | None = None
     arc_centre: Point | None = None
     arc_start: float = 90.0

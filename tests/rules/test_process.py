@@ -29,6 +29,7 @@ def at_depth(check: PlateCheck, depth: float) -> PlateCheck:
     """
     return PlateCheck(
         plate=check.plate,
+        lines=check.lines,
         face=check.face,
         style=check.style,
         fit=check.fit,
@@ -73,6 +74,7 @@ def test_a_cutter_that_does_not_reach_names_itself() -> None:
     stubby = Cutter(name="stub", tip_width=0.3, included_angle=30.0, max_depth=0.4)
     check = PlateCheck(
         plate=check.plate,
+        lines=check.lines,
         face=check.face,
         style=check.style,
         fit=check.fit,
@@ -98,6 +100,7 @@ def test_a_cut_needing_many_passes_warns() -> None:
     check = build_check(("RUN",), stock="STAIN-10", depth=0.08)
     deep = PlateCheck(
         plate=check.plate,
+        lines=check.lines,
         face=check.face,
         style=check.style,
         fit=check.fit,
@@ -120,6 +123,7 @@ def test_a_spring_pass_is_not_counted_against_the_limit() -> None:
     check = build_check(("RUN",), stock="LAM32-RW", depth=0.4)
     sprung = PlateCheck(
         plate=check.plate,
+        lines=check.lines,
         face=check.face,
         style=check.style,
         fit=check.fit,

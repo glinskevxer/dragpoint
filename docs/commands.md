@@ -139,6 +139,7 @@ Compile a plate and print what the rules say about it.
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
 | `--mirror` | Cut it back to front. |  |
+| `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
 | `--halign` |  | `centre` |
 | `--valign` |  | `middle` |
@@ -174,6 +175,7 @@ Draw one plate as an SVG preview or a DXF.
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
 | `--mirror` | Cut it back to front. |  |
+| `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
 | `--halign` |  | `centre` |
 | `--valign` |  | `middle` |
@@ -212,6 +214,7 @@ Post one plate to a machine program.
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
 | `--mirror` | Cut it back to front. |  |
+| `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
 | `--halign` |  | `centre` |
 | `--valign` |  | `middle` |
@@ -251,6 +254,7 @@ Estimate how long one plate takes.
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
 | `--mirror` | Cut it back to front. |  |
+| `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
 | `--halign` |  | `centre` |
 | `--valign` |  | `middle` |

@@ -345,3 +345,37 @@ def test_lettering_can_face_inward() -> None:
         arc.centre.distance_to(point) for stroke in inward.text_strokes for point in stroke.points
     )
     assert in_reach < out_reach
+
+
+def test_a_plate_that_does_not_wrap_keeps_the_lines_it_was_given() -> None:
+    made = compile_plate(plate_spec(lines=("ISOLATE BEFORE WORKING ON THIS PANEL",)))
+    assert made.lines == ("ISOLATE BEFORE WORKING ON THIS PANEL",)
+
+
+def test_a_wrapping_plate_breaks_a_long_legend() -> None:
+    made = compile_plate(
+        plate_spec(lines=("ISOLATE BEFORE WORKING ON THIS PANEL",), height=40.0, wrap=True)
+    )
+    assert len(made.lines) > 1
+    assert " ".join(made.lines) == "ISOLATE BEFORE WORKING ON THIS PANEL"
+
+
+def test_wrapping_happens_before_fitting() -> None:
+    words = ("ISOLATE BEFORE WORKING ON THIS PANEL",)
+    squeezed = compile_plate(plate_spec(lines=words, height=40.0))
+    wrapped = compile_plate(plate_spec(lines=words, height=40.0, wrap=True))
+    assert wrapped.style.condense > squeezed.style.condense
+
+
+def test_wrapping_uses_the_height_it_has() -> None:
+    words = ("ISOLATE BEFORE WORKING ON THIS PANEL",)
+    short = compile_plate(plate_spec(lines=words, height=12.0, wrap=True))
+    tall = compile_plate(plate_spec(lines=words, height=40.0, wrap=True))
+    assert len(tall.lines) > len(short.lines)
+
+
+def test_the_missing_glyph_rule_reads_the_lines_that_were_set() -> None:
+    made = compile_plate(plate_spec(lines=("45\u00b0C AND RISING",), height=40.0, wrap=True))
+    found = made.report.by_rule("legend-missing-glyph")
+    assert not found.clean
+    assert found.violations[0].subject == "P-101 line 1"

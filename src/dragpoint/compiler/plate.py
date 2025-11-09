@@ -35,6 +35,7 @@ from dragpoint.spec.plate import PlateSpec
 from dragpoint.text.fit import FitResult, fit_lines
 from dragpoint.text.layout import LaidOutText, VAlign, layout_lines
 from dragpoint.text.style import TextStyle
+from dragpoint.text.wrap import wrap_to_box
 from dragpoint.tool.cutter import Cutter, catalogue_cutter
 from dragpoint.tool.material import Material, material
 from dragpoint.tool.passes import PassPlan, plan_passes
@@ -48,6 +49,7 @@ class EngravedPlate:
     """One plate, all the way through, with everything it was decided from."""
 
     spec: PlateSpec
+    lines: tuple[str, ...]
     face: StrokeFace
     style: TextStyle
     fit: FitResult
@@ -83,6 +85,7 @@ class EngravedPlate:
         """
         return PlateCheck(
             plate=self.spec,
+            lines=self.lines,
             face=self.face,
             style=self.style,
             fit=self.fit,
@@ -116,7 +119,25 @@ def _single(plan: PassPlan) -> PassPlan:
     )
 
 
-def _lay_out(spec: PlateSpec, face: StrokeFace, style: TextStyle) -> LaidOutText:
+def _lines_of(spec: PlateSpec, face: StrokeFace) -> tuple[str, ...]:
+    """The lines to set, broken up first when the plate asks for it.
+
+    Wrapping happens before fitting, not after. A legend broken into three
+    lines needs far less squeezing than the same words on one, and fitting
+    first would squeeze it to nothing and then break the squeezed version.
+    """
+    if not spec.wrap:
+        return spec.lines
+    style = spec.style()
+    broken: list[str] = []
+    for line in spec.lines:
+        broken.extend(wrap_to_box(line, face, style, spec.fit_limit(), spec.area().height))
+    return tuple(broken)
+
+
+def _lay_out(
+    spec: PlateSpec, face: StrokeFace, style: TextStyle, lines: tuple[str, ...]
+) -> LaidOutText:
     """Lay the lines out, either in the engraving area or ready to be bent.
 
     Text that is going to be bent is laid out about the origin instead: x
@@ -127,17 +148,17 @@ def _lay_out(spec: PlateSpec, face: StrokeFace, style: TextStyle) -> LaidOutText
     """
     if spec.arc() is None:
         return layout_lines(
-            spec.lines,
+            lines,
             face,
             style,
             box=spec.area(),
             halign=spec.halign,
             valign=spec.valign,
         )
-    natural = layout_lines(spec.lines, face, style)
+    natural = layout_lines(lines, face, style)
     half = max(natural.widest, QUANTUM) / 2.0
     return layout_lines(
-        spec.lines,
+        lines,
         face,
         style,
         box=Box(-half, -1.0, half, 0.0),
@@ -185,8 +206,9 @@ def compile_plate(
     if depth is None:
         depth = stock.nominal_depth
 
-    fit = fit_lines(spec.lines, face, spec.style(), spec.fit_limit(), spec.fit)
-    text = _lay_out(spec, face, fit.style)
+    lines = _lines_of(spec, face)
+    fit = fit_lines(lines, face, spec.style(), spec.fit_limit(), spec.fit)
+    text = _lay_out(spec, face, fit.style, lines)
     lettering = _text_strokes(spec, text)
 
     drawn = lettering + tuple(_border_strokes(spec))
@@ -220,6 +242,7 @@ def compile_plate(
 
     check = PlateCheck(
         plate=spec,
+        lines=lines,
         face=face,
         style=fit.style,
         fit=fit,
@@ -233,6 +256,7 @@ def compile_plate(
     )
     return EngravedPlate(
         spec=spec,
+        lines=lines,
         face=face,
         style=fit.style,
         fit=fit,

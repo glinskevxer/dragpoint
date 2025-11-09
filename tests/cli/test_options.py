@@ -26,6 +26,7 @@ def defaults(**overrides: Any) -> dict[str, Any]:
         "condense": 1.0,
         "slant": 0.0,
         "mirror": False,
+        "wrap": False,
         "fit": "condense",
         "halign": "centre",
         "valign": "middle",
@@ -162,3 +163,8 @@ def test_lettering_can_be_asked_to_face_inward() -> None:
     arc = spec.arc()
     assert arc is not None
     assert not arc.outward
+
+
+def test_wrapping_is_off_unless_it_is_asked_for() -> None:
+    assert not plate_from_options(defaults()).wrap
+    assert plate_from_options(defaults(wrap=True)).wrap

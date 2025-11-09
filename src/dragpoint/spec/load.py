@@ -50,6 +50,7 @@ _PLATE_PLAIN = (
     "arc_sweep",
     "arc_clockwise",
     "arc_inward",
+    "wrap",
 )
 
 

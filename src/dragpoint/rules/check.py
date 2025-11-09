@@ -52,6 +52,7 @@ class PlateCheck:
     """
 
     plate: PlateSpec
+    lines: tuple[str, ...]
     face: StrokeFace
     style: TextStyle
     fit: FitResult

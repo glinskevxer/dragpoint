@@ -49,6 +49,7 @@ def build_check(
     )
     return PlateCheck(
         plate=plate,
+        lines=plate.lines,
         face=face,
         style=fit.style,
         fit=fit,
