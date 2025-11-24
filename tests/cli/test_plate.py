@@ -166,3 +166,28 @@ def test_a_blank_plate_still_works(runner: CliRunner) -> None:
     result = run(runner, "plate", "check")
     assert result.exit_code == 0
     assert "0 strokes" in result.output
+
+
+def test_a_plate_with_no_holes_drills_an_empty_program(runner: CliRunner) -> None:
+    result = run(runner, "plate", "drill", "--size", "60x20mm")
+    assert result.exit_code == 0
+    assert "\n%\n" in result.output
+    assert "M30" in result.output
+    assert "G01" not in result.output
+
+
+def test_the_drilling_says_what_it_is_doing(runner: CliRunner) -> None:
+    result = run(runner, "plate", "drill", "--size", "60x20mm")
+    assert "nothing to drill" in result.output
+
+
+def test_the_drill_program_can_go_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "P-9-drill.nc"
+    result = run(runner, "plate", "drill", "--out", str(target), "--size", "60x20mm")
+    assert result.exit_code == 0
+    assert target.read_text(encoding="utf-8").startswith("%")
+
+
+def test_the_peck_can_be_set(runner: CliRunner) -> None:
+    fine = run(runner, "plate", "drill", "--peck", "0.2mm", "--size", "60x20mm")
+    assert fine.exit_code == 0

@@ -13,11 +13,13 @@ import click
 
 from dragpoint.cli.common import echo_report, exit_code_for, handled, write_out
 from dragpoint.cli.options import plate_from_options, plate_options, setup_from_options
+from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
 from dragpoint.compiler.plate import compile_plate
 from dragpoint.draw.dxf import render_dxf
 from dragpoint.draw.svg import render_svg
 from dragpoint.estimate.cycle import estimate_plate
 from dragpoint.post.base import PostOptions, post_names, render
+from dragpoint.units import parse_length
 
 __all__ = ["plate"]
 
@@ -128,3 +130,37 @@ def time_plate(**options: object) -> None:
         f"  cut {made.cuts.cut_length():.1f}mm over {made.passes.cutting_passes} passes, "
         f"travel {made.order.after:.1f}mm"
     )
+
+
+@plate.command("drill")
+@plate_options
+@click.option(
+    "--post",
+    "post_name",
+    type=click.Choice(list(post_names())),
+    default="iso",
+    show_default=True,
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.option("--peck", default=f"{DEFAULT_PECK}mm", show_default=True, help="Depth per peck.")
+def drill(post_name: str, out: Path | None, peck: str, **options: object) -> None:
+    """Post the drilling for one plate as a program of its own.
+
+    A plate with no holes on it posts an empty program rather than nothing,
+    so a job that drills some plates and not others still has a file for
+    every plate and the operator does not have to work out which.
+    """
+    with handled():
+        spec = plate_from_options(options)
+        plan = drill_plate(spec, setup=setup_from_options(options), peck=parse_length(peck))
+    click.echo(str(plan), err=True)
+    text = render(
+        post_name,
+        plan.toolpath,
+        PostOptions(
+            program=f"{spec.name} DRILL",
+            spindle=plan.stock.spindle,
+            notes=(f"{len(plan)} holes {plan.depth:.2f}mm deep in {plan.stock.name}",),
+        ),
+    )
+    write_out(text, out)

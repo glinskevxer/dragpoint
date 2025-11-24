@@ -199,6 +199,44 @@ Draw one plate as an SVG preview or a DXF.
 | `--scale` | Pixels per mm, SVG only. | `4.0` |
 | `--travel` | Draw the rapid moves too, SVG only. |  |
 
+### `dragpoint plate drill [LINES...]`
+
+Post the drilling for one plate as a program of its own.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--name` | Plate name. | `PLATE` |
+| `--size` | Plate size, WxH. | `60x20mm` |
+| `--stock` | Stock code. | `LAM16-BW` |
+| `--face` |  | `panelgothic` |
+| `--cap-height` | Lettering height. | `3mm` |
+| `--tracking` | Space per glyph. | `0mm` |
+| `--condense` | Horizontal squeeze. | `1.0` |
+| `--slant` | Oblique, in degrees. |  |
+| `--mirror` | Cut it back to front. |  |
+| `--wrap` | Break long lines to fit. |  |
+| `--fit` |  | `condense` |
+| `--halign` |  | `centre` |
+| `--valign` |  | `middle` |
+| `--margin` | Engraving margin. | `2mm` |
+| `--border` | Engraved border inset. |  |
+| `--depth` | Cut depth, else the stock nominal. |  |
+| `--cutter` | Cutter name, else the shop default. |  |
+| `--arc` | Set the legend round this radius. |  |
+| `--arc-start` | Degrees at the middle. | `90.0` |
+| `--arc-sweep` | Degrees allowed. | `180.0` |
+| `--arc-clockwise` | Run the legend the other way. |  |
+| `--arc-inward` | Letters face the middle. |  |
+| `--safe` | Full retract height. | `5mm` |
+| `--clearance` | Hop height. | `0.5mm` |
+| `--hop` | Lift high above this move. | `25mm` |
+| `--no-optimise` | Leave the travel order alone. |  |
+| `--pass-order` |  | `by-pass` |
+| `--rapid-rate` | Rapid mm/min. | `6000.0` |
+| `--post` |  | `iso` |
+| `--out` |  |  |
+| `--peck` | Depth per peck. | `0.5mm` |
+
 ### `dragpoint plate post [LINES...]`
 
 Post one plate to a machine program.

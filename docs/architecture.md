@@ -38,7 +38,7 @@ import that would break it fails the build rather than the review.
 - **`dragpoint.nest`** `shelf`
 - **`dragpoint.path`** `cut`, `order`, `plan`
 - **`dragpoint.post`** `base`, `iso`, `plotter`
-- **`dragpoint.compiler`** `job`, `plate`, `settings`
+- **`dragpoint.compiler`** `drill`, `job`, `plate`, `settings`
 - **`dragpoint.draw`** `dxf`, `svg`
 - **`dragpoint.estimate`** `cycle`
 - **`dragpoint.cli`** `common`, `crib`, `font`, `job`, `main`, `options`, `plate`
