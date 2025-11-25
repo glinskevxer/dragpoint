@@ -171,3 +171,33 @@ def test_the_summary_names_the_plates_that_are_not_ok(runner: CliRunner, tmp_pat
     )
     result = run(runner, "job", "summary", str(bad))
     assert "not ok: P" in result.output
+
+
+def test_a_job_writes_a_setup_sheet(runner: CliRunner) -> None:
+    result = run(runner, "job", "sheet", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "SETUP SHEET   MCC-7" in result.output
+    assert "nest      " in result.output
+
+
+def test_the_nest_can_be_left_off_the_sheet(runner: CliRunner) -> None:
+    result = run(runner, "job", "sheet", str(EXAMPLE), "--no-nest")
+    assert "nest      " not in result.output
+
+
+def test_a_setup_sheet_can_go_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "setup.txt"
+    run(runner, "job", "sheet", str(EXAMPLE), "--out", str(target))
+    assert "SETUP SHEET" in target.read_text(encoding="utf-8")
+
+
+def test_a_job_with_no_sheet_still_writes_a_setup_sheet(runner: CliRunner, tmp_path: Path) -> None:
+    plain = tmp_path / "plain.toml"
+    plain.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['A']\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "job", "sheet", str(plain))
+    assert result.exit_code == 0
+    assert "SETUP SHEET   J" in result.output

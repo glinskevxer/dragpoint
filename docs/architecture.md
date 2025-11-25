@@ -24,8 +24,9 @@ import that would break it fails the build rather than the review.
 | `dragpoint.compiler` | 10 | Putting the layers together into something a machine can run. |
 | `dragpoint.draw` | 11 | Drawings of a plate, for people rather than for machines. |
 | `dragpoint.estimate` | 11 | How long it takes and how much stock it eats. |
-| `dragpoint.cli` | 12 | The command line. |
-| `dragpoint.tools` | 13 | Checks and generators that run over the checkout. |
+| `dragpoint.report` | 12 | Paperwork: what goes to the machine alongside the program. |
+| `dragpoint.cli` | 13 | The command line. |
+| `dragpoint.tools` | 14 | Checks and generators that run over the checkout. |
 
 ## What is in each layer
 
@@ -41,5 +42,6 @@ import that would break it fails the build rather than the review.
 - **`dragpoint.compiler`** `drill`, `job`, `plate`, `settings`
 - **`dragpoint.draw`** `dxf`, `svg`
 - **`dragpoint.estimate`** `cycle`
+- **`dragpoint.report`** `setup`
 - **`dragpoint.cli`** `common`, `crib`, `font`, `job`, `main`, `options`, `plate`
 - **`dragpoint.tools`** `build_architecture`, `build_commands`, `build_crib`, `build_rules`, `check_docstrings`, `check_face`, `check_layers`, `check_naming`, `check_tests`, `check_wiring`, `generate`, `release_check`, `smoke`, `support`

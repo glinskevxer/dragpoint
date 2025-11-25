@@ -108,6 +108,15 @@ Post every plate in a schedule, one file each.
 | `--out` | Directory to write the programs into. |  |
 | `--force` | Post plates that failed the rules. |  |
 
+### `dragpoint job sheet SCHEDULE`
+
+Write the setup sheet that goes to the machine with the job.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--out` |  |  |
+| `--no-nest` | Leave the nest off the sheet. |  |
+
 ### `dragpoint job summary SCHEDULE`
 
 Say what a job comes to without printing every violation.

@@ -18,6 +18,7 @@ from dragpoint.compiler.settings import MachineSetup
 from dragpoint.estimate.cycle import estimate_job
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
+from dragpoint.report.setup import setup_sheet
 from dragpoint.spec.load import load_job
 
 __all__ = ["job"]
@@ -135,3 +136,17 @@ def summary(schedule: Path) -> None:
     failed = made.failed()
     if failed:
         click.echo(f"  not ok: {', '.join(plate.name for plate in failed)}")
+
+
+@job.command("sheet")
+@SCHEDULE
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.option("--no-nest", is_flag=True, help="Leave the nest off the sheet.")
+def sheet(schedule: Path, out: Path | None, no_nest: bool) -> None:
+    """Write the setup sheet that goes to the machine with the job."""
+    with handled():
+        spec = load_job(schedule)
+        made = compile_job(spec)
+        nest = None if no_nest or spec.sheet is None else nest_job(spec)
+        text = setup_sheet(made, nest=nest)
+    write_out(text, out)

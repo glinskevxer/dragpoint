@@ -39,8 +39,9 @@ RANKS: dict[str, int] = {
     "compiler": 10,
     "draw": 11,
     "estimate": 11,
-    "cli": 12,
-    "tools": 13,
+    "report": 12,
+    "cli": 13,
+    "tools": 14,
 }
 """Package to its place in the stack. Lower is further down."""
 
