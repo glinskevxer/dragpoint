@@ -201,3 +201,37 @@ def test_a_job_with_no_sheet_still_writes_a_setup_sheet(runner: CliRunner, tmp_p
     result = run(runner, "job", "sheet", str(plain))
     assert result.exit_code == 0
     assert "SETUP SHEET   J" in result.output
+
+
+def test_a_job_drills_the_plates_that_have_holes(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "drilling"
+    result = run(runner, "job", "drill", str(EXAMPLE), "--out", str(out))
+    assert result.exit_code == 0
+    written = sorted(path.name for path in out.iterdir())
+    assert written == ["P-111-drill.nc", "P-120-drill.nc"]
+    assert "2 plates have holes" in result.output
+
+
+def test_the_drilling_programs_are_programs(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "drilling"
+    run(runner, "job", "drill", str(EXAMPLE), "--out", str(out))
+    text = (out / "P-120-drill.nc").read_text(encoding="utf-8")
+    assert text.startswith("%")
+    assert "DRILL" in text
+    assert "M30" in text
+
+
+def test_every_plate_can_be_asked_for(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "drilling"
+    run(runner, "job", "drill", str(EXAMPLE), "--out", str(out), "--all-plates")
+    assert len(list(out.iterdir())) == 7
+
+
+def test_the_peck_can_be_set_for_a_job(runner: CliRunner, tmp_path: Path) -> None:
+    coarse = tmp_path / "coarse"
+    fine = tmp_path / "fine"
+    run(runner, "job", "drill", str(EXAMPLE), "--out", str(coarse), "--peck", "2mm")
+    run(runner, "job", "drill", str(EXAMPLE), "--out", str(fine), "--peck", "0.2mm")
+    coarse_lines = len((coarse / "P-120-drill.nc").read_text(encoding="utf-8").splitlines())
+    fine_lines = len((fine / "P-120-drill.nc").read_text(encoding="utf-8").splitlines())
+    assert fine_lines > coarse_lines

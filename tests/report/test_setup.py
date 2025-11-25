@@ -181,3 +181,40 @@ def test_a_row_is_padded_to_its_column_width() -> None:
     text = sheet_for(small_job())
     rows = [line for line in text.splitlines() if line.startswith("P-")]
     assert len({len(row) for row in rows}) == 1
+
+
+def test_a_job_with_no_holes_has_no_drilling_block() -> None:
+    assert "DRILLING" not in sheet_for(small_job())
+
+
+def test_a_job_with_holes_gets_a_drilling_block() -> None:
+    from dragpoint.geometry.point import Point
+    from dragpoint.spec.feature import Feature
+
+    hole = Feature.round_hole("fix1", Point(6.0, 10.0), 4.2)
+    job = small_job(
+        plates=(
+            PlateSpec(
+                name="P-1",
+                width=60.0,
+                height=20.0,
+                stock="LAM16-BW",
+                lines=("ONE",),
+                features=(hole,),
+            ),
+        )
+    )
+    text = sheet_for(job)
+    assert "DRILLING" in text
+    assert "drills      4.2mm" in text
+
+
+def test_the_drilling_block_says_it_is_a_second_setup() -> None:
+    text = setup_sheet(compile_job(load_job(EXAMPLE)))
+    assert "second setup, drill in the spindle" in text
+
+
+def test_every_drill_size_in_the_job_is_listed_once() -> None:
+    text = setup_sheet(compile_job(load_job(EXAMPLE)))
+    line = next(line for line in text.splitlines() if line.startswith("drills"))
+    assert line.count("4.2mm") == 1

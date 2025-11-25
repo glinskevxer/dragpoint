@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from dragpoint.compiler.drill import drill_plate
 from dragpoint.compiler.job import EngravedJob
 from dragpoint.compiler.plate import EngravedPlate
 from dragpoint.estimate.cycle import JobTime, estimate_job
@@ -81,6 +82,25 @@ def _heading(job: EngravedJob) -> list[str]:
     return lines
 
 
+def _drilling(job: EngravedJob) -> list[str]:
+    """The drilling, as its own block, or nothing when there are no holes.
+
+    Drilling is a second setup with a drill in the spindle, so it is set
+    apart on the sheet rather than mixed into the plate rows. A sheet that
+    listed the holes in the engraving table would have somebody drilling
+    with a cutter in the machine.
+    """
+    plans = [drill_plate(plate.spec) for plate in job]
+    with_holes = [plan for plan in plans if len(plan)]
+    if not with_holes:
+        return []
+    lines = ["", _rule(), "DRILLING (second setup, drill in the spindle)", _rule()]
+    lines.extend(f"{plan.name:<10}  {plan}" for plan in with_holes)
+    sizes = sorted({size for plan in with_holes for size in plan.diameters()})
+    lines.append(f"{'drills':<10}  {', '.join(f'{size:g}mm' for size in sizes)}")
+    return lines
+
+
 def _violations(job: EngravedJob) -> list[str]:
     """What the rules said, worst first, or a line saying they said nothing."""
     report = job.report().sorted_worst_first()
@@ -126,6 +146,7 @@ def setup_sheet(
             for name, count in nest.left_over:
                 lines.append(f"          {count} of {name} did not fit")
 
+    lines.extend(_drilling(job))
     lines.extend(_violations(job))
     lines.append("")
     return "\n".join(lines) + "\n"

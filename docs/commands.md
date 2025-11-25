@@ -91,6 +91,16 @@ Compile a schedule and print what the rules say.
 | `--plate` | Check one plate rather than all of them. |  |
 | `--quiet` | Say nothing, just set the exit code. |  |
 
+### `dragpoint job drill SCHEDULE`
+
+Post the drilling for every plate that has holes in it.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--out` | Directory to write the drilling programs into. |  |
+| `--peck` | Depth per peck. | `0.5mm` |
+| `--all-plates` | Write a file even for plates with no holes. |  |
+
 ### `dragpoint job nest SCHEDULE`
 
 Lay the pieces out on the sheet the schedule names.

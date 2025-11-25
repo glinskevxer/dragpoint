@@ -13,6 +13,7 @@ from pathlib import Path
 import click
 
 from dragpoint.cli.common import echo_report, exit_code_for, handled, write_out
+from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
 from dragpoint.compiler.job import compile_job
 from dragpoint.compiler.settings import MachineSetup
 from dragpoint.estimate.cycle import estimate_job
@@ -20,6 +21,7 @@ from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
 from dragpoint.report.setup import setup_sheet
 from dragpoint.spec.load import load_job
+from dragpoint.units import parse_length
 
 __all__ = ["job"]
 
@@ -150,3 +152,37 @@ def sheet(schedule: Path, out: Path | None, no_nest: bool) -> None:
         nest = None if no_nest or spec.sheet is None else nest_job(spec)
         text = setup_sheet(made, nest=nest)
     write_out(text, out)
+
+
+@job.command("drill")
+@SCHEDULE
+@click.option(
+    "--out",
+    type=click.Path(file_okay=False, path_type=Path),
+    required=True,
+    help="Directory to write the drilling programs into.",
+)
+@click.option("--peck", default=f"{DEFAULT_PECK}mm", show_default=True, help="Depth per peck.")
+@click.option("--all-plates", is_flag=True, help="Write a file even for plates with no holes.")
+def drill_job(schedule: Path, out: Path, peck: str, all_plates: bool) -> None:
+    """Post the drilling for every plate that has holes in it."""
+    with handled():
+        spec = load_job(schedule)
+        step = parse_length(peck)
+        plans = [drill_plate(plate, peck=step) for plate in spec.plates]
+    written = 0
+    for plan in plans:
+        if not len(plan) and not all_plates:
+            continue
+        text = render(
+            spec.post,
+            plan.toolpath,
+            PostOptions(
+                program=f"{spec.name} {plan.name} DRILL",
+                spindle=plan.stock.spindle,
+                notes=(f"{len(plan)} holes {plan.depth:.2f}mm deep in {plan.stock.name}",),
+            ),
+        )
+        write_out(text, out / f"{plan.name}-drill.{_extension(spec.post)}")
+        written += 1
+    click.echo(f"{written} plates have holes in them")
