@@ -90,6 +90,7 @@ Compile a schedule and print what the rules say.
 | --- | --- | --- |
 | `--plate` | Check one plate rather than all of them. |  |
 | `--quiet` | Say nothing, just set the exit code. |  |
+| `--json` | Print the whole thing as JSON. |  |
 
 ### `dragpoint job drill SCHEDULE`
 
@@ -178,6 +179,7 @@ Compile a plate and print what the rules say about it.
 | `--pass-order` |  | `by-pass` |
 | `--rapid-rate` | Rapid mm/min. | `6000.0` |
 | `--quiet` | Say nothing, just set the exit code. |  |
+| `--json` | Print the whole thing as JSON. |  |
 
 ### `dragpoint plate draw [LINES...]`
 

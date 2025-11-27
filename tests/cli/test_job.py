@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -235,3 +236,37 @@ def test_the_peck_can_be_set_for_a_job(runner: CliRunner, tmp_path: Path) -> Non
     coarse_lines = len((coarse / "P-120-drill.nc").read_text(encoding="utf-8").splitlines())
     fine_lines = len((fine / "P-120-drill.nc").read_text(encoding="utf-8").splitlines())
     assert fine_lines > coarse_lines
+
+
+def test_a_job_comes_out_as_json(runner: CliRunner) -> None:
+    payload = json.loads(run(runner, "job", "check", "--json", str(EXAMPLE)).output)
+    assert payload["job"] == "MCC-7"
+    assert payload["pieces"] == 15
+    assert payload["ok"] is True
+    assert len(payload["plates"]) == 7
+
+
+def test_one_plate_can_be_asked_for_as_json(runner: CliRunner) -> None:
+    payload = json.loads(
+        run(runner, "job", "check", "--json", str(EXAMPLE), "--plate", "P-110").output
+    )
+    assert len(payload["plates"]) == 1
+    assert payload["plates"][0]["plate"] == "P-110"
+
+
+def test_the_job_json_carries_every_plate_in_order(runner: CliRunner) -> None:
+    payload = json.loads(run(runner, "job", "check", "--json", str(EXAMPLE)).output)
+    assert [plate["plate"] for plate in payload["plates"]][:3] == ["P-101", "P-102", "P-103"]
+
+
+def test_a_job_with_errors_says_so_in_the_json(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "bad.toml"
+    bad.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['20mm','10mm']\nlines=['EMERGENCY STOP']\nfit='none'\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "job", "check", "--json", str(bad))
+    payload = json.loads(result.output)
+    assert result.exit_code == 1
+    assert payload["ok"] is False

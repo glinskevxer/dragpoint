@@ -11,7 +11,14 @@ from pathlib import Path
 
 import click
 
-from dragpoint.cli.common import echo_report, exit_code_for, handled, write_out
+from dragpoint.cli.common import (
+    echo_json,
+    echo_report,
+    exit_code_for,
+    handled,
+    plate_json,
+    write_out,
+)
 from dragpoint.cli.options import plate_from_options, plate_options, setup_from_options
 from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
 from dragpoint.compiler.plate import compile_plate
@@ -32,14 +39,17 @@ def plate() -> None:
 @plate.command("check")
 @plate_options
 @click.option("--quiet", is_flag=True, help="Say nothing, just set the exit code.")
+@click.option("--json", "as_json", is_flag=True, help="Print the whole thing as JSON.")
 @click.pass_context
-def check(context: click.Context, /, quiet: bool, **options: object) -> None:
+def check(context: click.Context, /, quiet: bool, as_json: bool, **options: object) -> None:
     """Compile a plate and print what the rules say about it."""
     with handled():
         made = compile_plate(plate_from_options(options), setup=setup_from_options(options))
-    if not quiet:
+    if as_json:
+        echo_json(plate_json(made))
+    elif not quiet:
         click.echo(str(made))
-    echo_report(made.report, quiet=quiet)
+        echo_report(made.report)
     context.exit(exit_code_for(made.report))
 
 

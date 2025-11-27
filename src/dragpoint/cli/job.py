@@ -12,7 +12,14 @@ from pathlib import Path
 
 import click
 
-from dragpoint.cli.common import echo_report, exit_code_for, handled, write_out
+from dragpoint.cli.common import (
+    echo_json,
+    echo_report,
+    exit_code_for,
+    handled,
+    plate_json,
+    write_out,
+)
 from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
 from dragpoint.compiler.job import compile_job
 from dragpoint.compiler.settings import MachineSetup
@@ -38,17 +45,30 @@ def job() -> None:
 @SCHEDULE
 @click.option("--plate", "only", default=None, help="Check one plate rather than all of them.")
 @click.option("--quiet", is_flag=True, help="Say nothing, just set the exit code.")
+@click.option("--json", "as_json", is_flag=True, help="Print the whole thing as JSON.")
 @click.pass_context
-def check(context: click.Context, /, schedule: Path, only: str | None, quiet: bool) -> None:
+def check(
+    context: click.Context, /, schedule: Path, only: str | None, quiet: bool, as_json: bool
+) -> None:
     """Compile a schedule and print what the rules say."""
     with handled():
         made = compile_job(load_job(schedule))
         plates = (made.plate(only),) if only else made.plates
+    report = made.plate(only).report if only else made.report()
+    if as_json:
+        echo_json(
+            {
+                "job": made.name,
+                "pieces": made.piece_count(),
+                "ok": all(plate.ok for plate in plates),
+                "plates": [plate_json(plate) for plate in plates],
+            }
+        )
+        context.exit(exit_code_for(report))
     for plate in plates:
         if not quiet:
             click.echo(str(plate))
         echo_report(plate.report, quiet=quiet)
-    report = made.plate(only).report if only else made.report()
     if not quiet:
         click.echo(str(made))
     context.exit(exit_code_for(report))

@@ -30,9 +30,12 @@ __all__ = [
     "OK",
     "REPORTED",
     "USAGE",
+    "echo_json",
     "echo_report",
     "exit_code_for",
     "handled",
+    "plate_json",
+    "report_json",
     "write_out",
 ]
 
@@ -135,6 +138,32 @@ def report_json(report: Report) -> list[dict[str, Any]]:
         }
         for violation in report
     ]
+
+
+def plate_json(plate: Any) -> dict[str, Any]:
+    """One compiled plate as plain data.
+
+    Everything a script would otherwise have to parse out of the printed
+    form. A shop that wants to feed this into a spreadsheet should not be
+    reading columns out of a report meant for a person.
+    """
+    return {
+        "plate": plate.spec.name,
+        "quantity": plate.spec.quantity,
+        "stock": plate.stock.name,
+        "cutter": plate.cutter.name,
+        "depth": plate.depth,
+        "groove": plate.cutter.width_at_depth(plate.depth),
+        "passes": plate.passes.cutting_passes,
+        "cap_height": plate.style.cap_height,
+        "condense": plate.style.condense,
+        "lines": list(plate.lines),
+        "fits": plate.fit.fits,
+        "cut_length": plate.cuts.cut_length(),
+        "travel": plate.order.after,
+        "ok": plate.ok,
+        "violations": report_json(plate.report),
+    }
 
 
 def pass_through(function: Callable[Parameters, Result]) -> Callable[Parameters, Result]:

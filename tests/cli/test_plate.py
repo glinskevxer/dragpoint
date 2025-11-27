@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -191,3 +192,53 @@ def test_the_drill_program_can_go_to_a_file(runner: CliRunner, tmp_path: Path) -
 def test_the_peck_can_be_set(runner: CliRunner) -> None:
     fine = run(runner, "plate", "drill", "--peck", "0.2mm", "--size", "60x20mm")
     assert fine.exit_code == 0
+
+
+def test_a_plate_comes_out_as_json(runner: CliRunner) -> None:
+    payload = json.loads(run(runner, "plate", "check", "--json", "PUMP 2", "RUN").output)
+    assert payload["plate"] == "PLATE"
+    assert payload["stock"] == "LAM16-BW"
+    assert payload["cutter"] == "V30-015"
+    assert payload["lines"] == ["PUMP 2", "RUN"]
+    assert payload["ok"] is True
+    assert payload["violations"] == []
+
+
+def test_the_json_carries_the_numbers_a_script_would_want(runner: CliRunner) -> None:
+    payload = json.loads(run(runner, "plate", "check", "--json", "RUN").output)
+    assert payload["groove"] > payload["depth"] * 0.0
+    assert payload["cut_length"] > 0.0
+    assert payload["passes"] >= 1
+
+
+def test_the_json_carries_the_violations(runner: CliRunner) -> None:
+    result = run(
+        runner,
+        "plate",
+        "check",
+        "--json",
+        "--fit",
+        "none",
+        "--size",
+        "20x10mm",
+        "EMERGENCY STOP PUSHBUTTON",
+    )
+    payload = json.loads(result.output)
+    assert result.exit_code == 1
+    assert payload["ok"] is False
+    assert any(item["severity"] == "error" for item in payload["violations"])
+
+
+def test_the_json_reports_the_lines_that_were_actually_set(runner: CliRunner) -> None:
+    result = run(
+        runner,
+        "plate",
+        "check",
+        "--json",
+        "--wrap",
+        "--size",
+        "40x40mm",
+        "ISOLATE BEFORE WORKING ON THIS PANEL",
+    )
+    payload = json.loads(result.output)
+    assert len(payload["lines"]) > 1
