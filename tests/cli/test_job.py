@@ -270,3 +270,32 @@ def test_a_job_with_errors_says_so_in_the_json(runner: CliRunner, tmp_path: Path
     payload = json.loads(result.output)
     assert result.exit_code == 1
     assert payload["ok"] is False
+
+
+def test_a_schedule_that_names_a_rule_nobody_has_says_so(runner: CliRunner, tmp_path: Path) -> None:
+    schedule = tmp_path / "job.toml"
+    schedule.write_text(
+        "[job]\nname='J'\n\n[job.rules]\nskip = ['no-such-rule']\n"
+        "[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "job", "check", str(schedule))
+    assert result.exit_code == 0
+    assert "names rules that do not exist" in result.output
+
+
+def test_a_schedule_can_turn_a_rule_off(runner: CliRunner, tmp_path: Path) -> None:
+    body = (
+        "[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\ncap_height='2.7mm'\n"
+    )
+    loud = tmp_path / "loud.toml"
+    loud.write_text("[job]\nname='J'\n" + body, encoding="utf-8")
+    quiet = tmp_path / "quiet.toml"
+    quiet.write_text(
+        "[job]\nname='J'\n\n[job.rules]\nskip = ['odd-lettering-height']\n" + body,
+        encoding="utf-8",
+    )
+    assert "note" in run(runner, "job", "check", str(loud)).output
+    assert "note" not in run(runner, "job", "check", str(quiet)).output

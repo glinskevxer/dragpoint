@@ -233,3 +233,39 @@ def test_a_plate_with_no_arc_keys_has_no_arc() -> None:
 def test_an_arc_sweep_reads_off_a_schedule() -> None:
     text = MINIMAL + "\narc_radius = '20mm'\narc_sweep = 90.0\n"
     assert parse_job(text).plate("P-1").arc_sweep == 90.0
+
+
+def test_a_schedule_can_skip_a_rule() -> None:
+    text = MINIMAL.replace('name = "J1"', 'name = "J1"\n\n[job.rules]\nskip = ["letter-weight"]')
+    assert parse_job(text).rules_skip == ("letter-weight",)
+
+
+def test_a_schedule_can_narrow_the_rules_to_a_few() -> None:
+    text = MINIMAL.replace('name = "J1"', 'name = "J1"\n\n[job.rules]\nonly = ["stroke-merge"]')
+    assert parse_job(text).rules_only == ("stroke-merge",)
+
+
+def test_a_schedule_can_change_a_severity() -> None:
+    text = MINIMAL.replace(
+        'name = "J1"',
+        'name = "J1"\n\n[job.rules]\nseverity = { "stroke-stub" = "error" }',
+    )
+    assert parse_job(text).rules_severity == {"stroke-stub": "error"}
+
+
+def test_an_unknown_rules_key_is_refused() -> None:
+    text = MINIMAL.replace('name = "J1"', 'name = "J1"\n\n[job.rules]\nnope = []')
+    with pytest.raises(SpecError, match="unknown key 'nope'"):
+        parse_job(text)
+
+
+def test_a_rule_list_that_is_not_a_list_is_refused() -> None:
+    text = MINIMAL.replace('name = "J1"', 'name = "J1"\n\n[job.rules]\nskip = "one"')
+    with pytest.raises(SpecError, match="a list of rule names"):
+        parse_job(text)
+
+
+def test_a_severity_that_is_not_a_table_is_refused() -> None:
+    text = MINIMAL.replace('name = "J1"', 'name = "J1"\n\n[job.rules]\nseverity = "loud"')
+    with pytest.raises(SpecError, match="a table of rule names"):
+        parse_job(text)

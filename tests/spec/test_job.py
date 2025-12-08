@@ -133,3 +133,26 @@ def test_str_says_plates_and_pieces() -> None:
     job = JobSpec(name="PANEL-7", plates=(plate("P-101", quantity=3),))
     assert str(job) == "PANEL-7: 1 plates, 3 pieces"
     assert str(sheet()) == "LAM16-BW 300x600mm"
+
+
+def test_a_job_names_no_rules_unless_it_says_so() -> None:
+    job = JobSpec(name="J1")
+    assert job.rules_only == ()
+    assert job.rules_skip == ()
+    assert job.rules_severity == {}
+    assert job.mentions_rules() == ()
+
+
+def test_every_rule_a_job_names_is_listed_once_and_sorted() -> None:
+    job = JobSpec(
+        name="J1",
+        rules_only=("stroke-merge",),
+        rules_skip=("letter-weight", "stroke-merge"),
+        rules_severity={"stroke-stub": "error"},
+    )
+    assert job.mentions_rules() == ("letter-weight", "stroke-merge", "stroke-stub")
+
+
+def test_the_names_are_not_checked_against_the_register() -> None:
+    job = JobSpec(name="J1", rules_skip=("no-such-rule",))
+    assert job.mentions_rules() == ("no-such-rule",)

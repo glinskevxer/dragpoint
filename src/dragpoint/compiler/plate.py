@@ -29,7 +29,7 @@ from dragpoint.path.cut import CutList, expand_passes
 from dragpoint.path.order import OrderResult, order_cuts
 from dragpoint.path.plan import Toolpath, build_toolpath
 from dragpoint.rules.check import PlateCheck, RuleSelection, run_rules
-from dragpoint.rules.report import Report
+from dragpoint.rules.report import Report, Severity
 from dragpoint.spec.job import JobSpec
 from dragpoint.spec.plate import PlateSpec
 from dragpoint.text.fit import FitResult, fit_lines
@@ -104,6 +104,26 @@ class EngravedPlate:
             f"{self.spec.name}: {len(self.strokes)} strokes, "
             f"{len(self.cuts)} cuts, {self.report}, {verdict}"
         )
+
+
+def rule_selection(job: JobSpec) -> RuleSelection:
+    """Turn what a schedule says about the rules into a selection.
+
+    A severity word the register has never heard of is left out rather than
+    raised on, and comes back through
+    :meth:`~dragpoint.rules.check.RuleSelection.unknown_names` with every
+    other name that answers to nothing.
+    """
+    severity: dict[str, Severity] = {}
+    for name, word in job.rules_severity.items():
+        for level in Severity:
+            if str(level) == str(word).lower():
+                severity[name] = level
+    return RuleSelection(
+        only=frozenset(job.rules_only),
+        skip=frozenset(job.rules_skip),
+        severity=severity,
+    )
 
 
 def _single(plan: PassPlan) -> PassPlan:
@@ -199,6 +219,7 @@ def compile_plate(
     """
     machine = setup or MachineSetup()
     owner = job or JobSpec(name=spec.name, plates=(spec,))
+    wanted = selection if selection is not None else rule_selection(owner)
     face = load_face(spec.face)
     stock = material(spec.stock)
     cutter = catalogue_cutter(owner.cutter_for(spec))
@@ -271,5 +292,5 @@ def compile_plate(
         cuts=cuts,
         order=ordered,
         toolpath=toolpath,
-        report=run_rules(check, selection),
+        report=run_rules(check, wanted),
     )

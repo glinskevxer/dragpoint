@@ -22,6 +22,7 @@ from dragpoint.cli.common import (
 )
 from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
 from dragpoint.compiler.job import compile_job
+from dragpoint.compiler.plate import rule_selection
 from dragpoint.compiler.settings import MachineSetup
 from dragpoint.estimate.cycle import estimate_job
 from dragpoint.nest.shelf import nest_job
@@ -52,8 +53,12 @@ def check(
 ) -> None:
     """Compile a schedule and print what the rules say."""
     with handled():
-        made = compile_job(load_job(schedule))
+        spec = load_job(schedule)
+        made = compile_job(spec)
         plates = (made.plate(only),) if only else made.plates
+    unknown = rule_selection(spec).unknown_names()
+    if unknown and not quiet:
+        click.echo(f"the schedule names rules that do not exist: {', '.join(unknown)}", err=True)
     report = made.plate(only).report if only else made.report()
     if as_json:
         echo_json(

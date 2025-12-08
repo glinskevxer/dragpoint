@@ -14,7 +14,8 @@ stock and a job can hold plates cut from two different sheets.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from dragpoint.errors import OutOfRange
 from dragpoint.spec.plate import PlateSpec
@@ -80,7 +81,13 @@ class Sheet:
 
 @dataclass(frozen=True, slots=True)
 class JobSpec:
-    """Everything one setup needs."""
+    """Everything one setup needs.
+
+    The rule fields hold names and words rather than anything from the rules
+    package, because a job specification is data and knows nothing about
+    what checks a plate. Turning them into a selection is the compiler's
+    job, which is the layer that knows both.
+    """
 
     name: str
     plates: tuple[PlateSpec, ...] = ()
@@ -89,6 +96,9 @@ class JobSpec:
     post: str = "iso"
     spring_pass: bool = False
     depth: float | None = None
+    rules_only: tuple[str, ...] = ()
+    rules_skip: tuple[str, ...] = ()
+    rules_severity: Mapping[str, str] = field(default_factory=dict)
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -101,6 +111,15 @@ class JobSpec:
             if plate.name in seen:
                 raise ValueError(f"job {self.name} has two plates called {plate.name!r}")
             seen.add(plate.name)
+
+    def mentions_rules(self) -> tuple[str, ...]:
+        """Every rule name this job names, sorted, once each.
+
+        The names are not checked here. A schedule that skips a rule which
+        has since been renamed should still cut, and saying so is the
+        compiler's job rather than a reason to refuse the file.
+        """
+        return tuple(sorted({*self.rules_only, *self.rules_skip, *self.rules_severity}))
 
     def plate(self, name: str) -> PlateSpec:
         """Look one plate up by name."""

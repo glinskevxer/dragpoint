@@ -79,7 +79,7 @@ def parse_job(raw: bytes | str, source: str = "<string>") -> JobSpec:
         source,
         "job",
         job_table,
-        {"name", "cutter", "post", "spring_pass", "depth", "notes", "sheet"},
+        {"name", "cutter", "post", "spring_pass", "depth", "notes", "sheet", "rules"},
     )
 
     plates = tuple(
@@ -98,6 +98,7 @@ def parse_job(raw: bytes | str, source: str = "<string>") -> JobSpec:
             spring_pass=bool(job_table.get("spring_pass", False)),
             depth=_optional_length(source, "job", job_table, "depth"),
             notes=str(job_table.get("notes", "")),
+            **_read_rules(source, job_table.get("rules")),
         )
     except (ValueError, KeyError, DragpointError) as exc:
         raise SpecError(source, "job", str(exc)) from exc
@@ -112,6 +113,31 @@ def _plate_entries(source: str, document: dict[str, Any]) -> list[dict[str, Any]
         if not isinstance(entry, dict):
             raise SpecError(source, f"plate[{index}]", "expected a table")
     return entries
+
+
+def _read_rules(source: str, table: Any) -> dict[str, Any]:
+    """The optional ``[job.rules]`` table."""
+    if table is None:
+        return {}
+    where = "job.rules"
+    values = _table(source, where, table)
+    _reject_unknown(source, where, values, {"only", "skip", "severity"})
+    severity = values.get("severity", {})
+    if not isinstance(severity, dict):
+        raise SpecError(source, where, "severity takes a table of rule names to words")
+    return {
+        "rules_only": tuple(_read_names(source, where, values, "only")),
+        "rules_skip": tuple(_read_names(source, where, values, "skip")),
+        "rules_severity": {str(name): str(word) for name, word in severity.items()},
+    }
+
+
+def _read_names(source: str, where: str, table: dict[str, Any], key: str) -> list[str]:
+    """A list of rule names."""
+    raw = table.get(key, [])
+    if not isinstance(raw, list):
+        raise SpecError(source, where, f"{key} takes a list of rule names")
+    return [str(name) for name in raw]
 
 
 def _read_sheet(source: str, table: Any) -> Sheet | None:

@@ -156,3 +156,50 @@ def test_str_says_what_the_job_comes_to() -> None:
 def test_str_says_how_many_plates_are_not_ok() -> None:
     job = JobSpec(name="J1", plates=(plate_spec(name="P-1", lines=("45°C",)),))
     assert "1 plates not ok" in str(compile_job(job))
+
+
+def test_a_job_that_skips_a_rule_does_not_run_it() -> None:
+    from dragpoint.compiler.plate import rule_selection
+
+    plate = plate_spec(name="P-1", lines=("RUN",), cap_height=2.7)
+    loud = compile_job(JobSpec(name="J1", plates=(plate,)))
+    quiet = compile_job(JobSpec(name="J1", plates=(plate,), rules_skip=("odd-lettering-height",)))
+    assert not loud.report().by_rule("odd-lettering-height").clean
+    assert quiet.report().by_rule("odd-lettering-height").clean
+    assert rule_selection(quiet.spec).unknown_names() == ()
+
+
+def test_a_job_can_narrow_the_rules_to_the_ones_it_cares_about() -> None:
+    plate = plate_spec(name="P-1", lines=("45\u00b0C",))
+    narrowed = compile_job(JobSpec(name="J1", plates=(plate,), rules_only=("stroke-merge",)))
+    assert narrowed.report().by_rule("legend-missing-glyph").clean
+    assert {item.rule for item in narrowed.report()} <= {"stroke-merge"}
+
+
+def test_a_job_can_make_a_warning_into_an_error() -> None:
+    from dragpoint.rules.report import Severity
+
+    plate = plate_spec(name="P-1", lines=("RUN",), cap_height=2.7)
+    strict = compile_job(
+        JobSpec(name="J1", plates=(plate,), rules_severity={"odd-lettering-height": "error"})
+    )
+    assert not strict.ok
+    assert strict.worst() is Severity.ERROR
+
+
+def test_a_severity_word_nobody_recognises_is_left_alone() -> None:
+    plate = plate_spec(name="P-1", lines=("RUN",), cap_height=2.7)
+    made = compile_job(
+        JobSpec(name="J1", plates=(plate,), rules_severity={"odd-lettering-height": "shouty"})
+    )
+    assert made.ok
+
+
+def test_a_rule_name_nobody_recognises_is_reported_rather_than_raised() -> None:
+    from dragpoint.compiler.plate import rule_selection
+
+    job = JobSpec(
+        name="J1", plates=(plate_spec(name="P-1", lines=("RUN",)),), rules_skip=("no-such-rule",)
+    )
+    assert compile_job(job).ok
+    assert rule_selection(job).unknown_names() == ("no-such-rule",)
