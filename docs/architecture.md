@@ -34,7 +34,7 @@ import that would break it fails the build rather than the review.
 - **`dragpoint.font`** `face`, `glyph`, `library`, `parse`, `write`
 - **`dragpoint.text`** `fit`, `layout`, `shape`, `style`, `wrap`
 - **`dragpoint.tool`** `cutter`, `material`, `passes`
-- **`dragpoint.spec`** `feature`, `job`, `load`, `plate`
+- **`dragpoint.spec`** `feature`, `job`, `load`, `plate`, `sheetload`
 - **`dragpoint.rules`** `check`, `fitment`, `legibility`, `process`, `report`
 - **`dragpoint.nest`** `shelf`
 - **`dragpoint.path`** `cut`, `order`, `plan`

@@ -28,7 +28,9 @@ from dragpoint.estimate.cycle import estimate_job
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
 from dragpoint.report.setup import setup_sheet
+from dragpoint.spec.job import JobSpec
 from dragpoint.spec.load import load_job
+from dragpoint.spec.sheetload import load_csv_job
 from dragpoint.units import parse_length
 
 __all__ = ["job"]
@@ -42,6 +44,18 @@ def job() -> None:
     """Work on a whole job."""
 
 
+def read_schedule(path: Path) -> JobSpec:
+    """Read a schedule, whichever of the two formats it is in.
+
+    The suffix decides. A drawing office sends a spreadsheet and a shop
+    keeps a TOML file, and both of them are the same job, so every command
+    takes either rather than making somebody convert one.
+    """
+    if path.suffix.lower() == ".csv":
+        return load_csv_job(path)
+    return load_job(path)
+
+
 @job.command("check")
 @SCHEDULE
 @click.option("--plate", "only", default=None, help="Check one plate rather than all of them.")
@@ -53,7 +67,7 @@ def check(
 ) -> None:
     """Compile a schedule and print what the rules say."""
     with handled():
-        spec = load_job(schedule)
+        spec = read_schedule(schedule)
         made = compile_job(spec)
         plates = (made.plate(only),) if only else made.plates
     unknown = rule_selection(spec).unknown_names()
@@ -92,7 +106,7 @@ def check(
 def post_job(context: click.Context, /, schedule: Path, out: Path, force: bool) -> None:
     """Post every plate in a schedule, one file each."""
     with handled():
-        spec = load_job(schedule)
+        spec = read_schedule(schedule)
         made = compile_job(spec)
     if not made.ok and not force:
         echo_report(made.report())
@@ -129,7 +143,7 @@ def _extension(post_name: str) -> str:
 def time_job(schedule: Path, block_time: float) -> None:
     """Estimate how long a whole job takes."""
     with handled():
-        made = compile_job(load_job(schedule))
+        made = compile_job(read_schedule(schedule))
         estimate = estimate_job(made, block_time=block_time)
     for name, quantity, time in estimate.per_plate:
         click.echo(f"{name:<10} x{quantity:<4} {time}")
@@ -142,7 +156,7 @@ def time_job(schedule: Path, block_time: float) -> None:
 def nest(schedule: Path, no_rotate: bool) -> None:
     """Lay the pieces out on the sheet the schedule names."""
     with handled():
-        spec = load_job(schedule)
+        spec = read_schedule(schedule)
         result = nest_job(spec, allow_rotation=not no_rotate)
     for item in result:
         click.echo(str(item))
@@ -154,7 +168,7 @@ def nest(schedule: Path, no_rotate: bool) -> None:
 def summary(schedule: Path) -> None:
     """Say what a job comes to without printing every violation."""
     with handled():
-        spec = load_job(schedule)
+        spec = read_schedule(schedule)
         made = compile_job(spec, setup=MachineSetup())
     click.echo(str(made))
     click.echo(f"  cutters {', '.join(spec.cutter_codes())}")
@@ -172,7 +186,7 @@ def summary(schedule: Path) -> None:
 def sheet(schedule: Path, out: Path | None, no_nest: bool) -> None:
     """Write the setup sheet that goes to the machine with the job."""
     with handled():
-        spec = load_job(schedule)
+        spec = read_schedule(schedule)
         made = compile_job(spec)
         nest = None if no_nest or spec.sheet is None else nest_job(spec)
         text = setup_sheet(made, nest=nest)
@@ -192,7 +206,7 @@ def sheet(schedule: Path, out: Path | None, no_nest: bool) -> None:
 def drill_job(schedule: Path, out: Path, peck: str, all_plates: bool) -> None:
     """Post the drilling for every plate that has holes in it."""
     with handled():
-        spec = load_job(schedule)
+        spec = read_schedule(schedule)
         step = parse_length(peck)
         plans = [drill_plate(plate, peck=step) for plate in spec.plates]
     written = 0

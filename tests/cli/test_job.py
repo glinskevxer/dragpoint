@@ -299,3 +299,32 @@ def test_a_schedule_can_turn_a_rule_off(runner: CliRunner, tmp_path: Path) -> No
     )
     assert "note" in run(runner, "job", "check", str(loud)).output
     assert "note" not in run(runner, "job", "check", str(quiet)).output
+
+
+def test_a_csv_schedule_reads_as_well_as_a_toml_one(runner: CliRunner) -> None:
+    csv_example = EXAMPLE.parent / "mcc-panel-8.csv"
+    result = run(runner, "job", "check", str(csv_example))
+    assert result.exit_code == 0
+    assert "mcc-panel-8" in result.output
+
+
+def test_a_csv_schedule_summarises(runner: CliRunner) -> None:
+    csv_example = EXAMPLE.parent / "mcc-panel-8.csv"
+    result = run(runner, "job", "summary", str(csv_example))
+    assert "5 plates" in result.output
+
+
+def test_a_csv_schedule_posts(runner: CliRunner, tmp_path: Path) -> None:
+    csv_example = EXAMPLE.parent / "mcc-panel-8.csv"
+    out = tmp_path / "programs"
+    result = run(runner, "job", "post", str(csv_example), "--out", str(out))
+    assert result.exit_code == 0
+    assert (out / "P-201.nc").is_file()
+
+
+def test_the_suffix_decides_which_reader_runs(runner: CliRunner, tmp_path: Path) -> None:
+    misnamed = tmp_path / "job.toml"
+    misnamed.write_text("Plate,Size,Material\nP-1,60x20,LAM16-BW\n", encoding="utf-8")
+    result = run(runner, "job", "check", str(misnamed))
+    assert result.exit_code == 1
+    assert "not readable as TOML" in result.output
