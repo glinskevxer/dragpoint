@@ -116,3 +116,48 @@ def test_a_face_file_is_not_cached_because_a_file_changes(tmp_path: Path) -> Non
         encoding="utf-8",
     )
     assert load_face_file(target).name == "second"
+
+
+def test_the_dial_face_ships_as_well() -> None:
+    assert "dialface" in shipped_names()
+
+
+def test_the_dial_face_draws_the_figures_and_not_the_letters() -> None:
+    face = shipped_face("dialface")
+    assert face.missing("0123456789 .,-/+") == ()
+    assert face.missing("ABC") == ("A", "B", "C")
+
+
+def test_the_dial_face_is_narrower_than_the_house_face() -> None:
+    dial = shipped_face("dialface")
+    house = shipped_face("panelgothic")
+    assert dial.glyph("zero").advance < house.glyph("zero").advance
+
+
+def test_the_two_faces_share_a_grid_so_they_mix_on_one_plate() -> None:
+    dial = shipped_face("dialface")
+    house = shipped_face("panelgothic")
+    assert dial.metrics.units_per_em == house.metrics.units_per_em
+    assert dial.metrics.cap_height == house.metrics.cap_height
+
+
+def test_the_dial_face_has_no_fallback_because_it_is_not_an_alphabet() -> None:
+    assert shipped_face("dialface").fallback is None
+
+
+def test_a_plate_can_ask_for_the_dial_face() -> None:
+    from dragpoint.compiler.plate import compile_plate
+    from dragpoint.spec.plate import PlateSpec
+
+    made = compile_plate(
+        PlateSpec(
+            name="SCALE",
+            width=60.0,
+            height=14.0,
+            stock="LAM16-BW",
+            lines=("0 20 40 60 80",),
+            face="dialface",
+        )
+    )
+    assert made.ok, str(made.report)
+    assert made.face.name == "dialface"

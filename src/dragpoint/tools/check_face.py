@@ -32,6 +32,7 @@ __all__ = [
     "MIN_SEPARATION",
     "MIN_STROKE",
     "REQUIRED",
+    "REQUIRED_BY_FACE",
     "main",
 ]
 
@@ -51,7 +52,19 @@ TOUCH = 2.0
 """Font units within which two strokes count as meeting on purpose."""
 
 REQUIRED = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-/()"
-"""Every face has to draw these. A legend plate cannot be set without them."""
+"""What a face has to draw unless it says otherwise below.
+
+A legend plate cannot be set without these, so a face that cannot draw one
+of them is a face nobody can use for the work this shop does.
+"""
+
+REQUIRED_BY_FACE = {"dialface": "0123456789 .,-/+"}
+"""Faces that are deliberately not alphabets, and what they do have to draw.
+
+A figures only face is a real thing and a useful one. What it must not be is
+an alphabet with half the letters missing, so it declares its own set here
+and is held to that instead.
+"""
 
 
 def face_path(name: str) -> Path:
@@ -100,8 +113,9 @@ def _glyph_problems(path: Path, face: StrokeFace, glyph_name: str) -> list[Probl
 def check_face(name: str, face: StrokeFace) -> list[Problem]:
     """Everything wrong with one face."""
     path = face_path(name)
+    wanted = REQUIRED_BY_FACE.get(name, REQUIRED)
     problems: list[Problem] = [
-        Problem(path, 1, f"{name} cannot draw {missing!r}") for missing in face.missing(REQUIRED)
+        Problem(path, 1, f"{name} cannot draw {missing!r}") for missing in face.missing(wanted)
     ]
     for glyph_name in face.names():
         problems.extend(_glyph_problems(path, face, glyph_name))
