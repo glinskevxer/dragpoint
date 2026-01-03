@@ -36,6 +36,7 @@ class MachineSetup:
     safe: float = 5.0
     clearance: float = 0.5
     hop_limit: float = 25.0
+    ramp: float = 0.0
     pass_order: PassOrder = PassOrder.BY_PASS
     allow_reverse: bool = True
     optimise_rounds: int = 2
@@ -50,6 +51,8 @@ class MachineSetup:
             raise OutOfRange("safe height", self.safe, self.clearance, math.inf)
         if self.hop_limit < 0.0:
             raise OutOfRange("hop limit", self.hop_limit, 0.0, math.inf)
+        if self.ramp < 0.0:
+            raise OutOfRange("ramp", self.ramp, 0.0, math.inf)
         if self.optimise_rounds < 0:
             raise OutOfRange("optimise rounds", self.optimise_rounds, 0, math.inf)
         if self.rapid_rate <= 0.0:
@@ -81,6 +84,8 @@ class MachineSetup:
         ]
         if not self.allow_reverse:
             parts.append("no reversing")
+        if self.ramp:
+            parts.append(f"ramp {self.ramp:g}mm")
         if self.spring_pass:
             parts.append("spring pass")
         return ", ".join(parts)

@@ -194,3 +194,57 @@ def test_str_summarises_the_program() -> None:
     path = build_toolpath(CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0)
     assert "moves" in str(path)
     assert "in the air" in str(path)
+
+
+def test_a_negative_ramp_is_refused() -> None:
+    with pytest.raises(OutOfRange, match="ramp"):
+        build_toolpath(CutList.of([bar(0.0)]), feed=1200.0, plunge_feed=300.0, ramp=-1.0)
+
+
+def test_without_a_ramp_the_plunge_goes_all_the_way_down_in_one() -> None:
+    path = build_toolpath(CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0)
+    plunges = [move for move in path.moves if move.kind is MoveKind.PLUNGE]
+    assert [move.z for move in plunges] == [-0.3]
+
+
+def test_a_ramp_plunges_only_to_the_surface() -> None:
+    path = build_toolpath(
+        CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0, ramp=2.0
+    )
+    plunges = [move for move in path.moves if move.kind is MoveKind.PLUNGE]
+    assert [move.z for move in plunges] == [0.0]
+
+
+def test_a_ramp_reaches_depth_along_the_first_part_of_the_stroke() -> None:
+    path = build_toolpath(
+        CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0, ramp=2.0
+    )
+    feeds = [move for move in path.moves if move.kind is MoveKind.FEED]
+    assert feeds[0].to == Point(2.0, 0.0)
+    assert feeds[0].z == pytest.approx(-0.3)
+
+
+def test_a_ramp_cuts_the_rest_of_the_stroke_after_it_gets_there() -> None:
+    path = build_toolpath(
+        CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0, ramp=2.0
+    )
+    last = path.of_kind(MoveKind.FEED)[-1]
+    assert last.to == Point(10.0, 0.0)
+    assert last.z == pytest.approx(-0.3)
+
+
+def test_a_ramp_longer_than_the_stroke_still_finishes_at_the_far_end() -> None:
+    path = build_toolpath(
+        CutList.of([bar(0.0, length=4.0)]), feed=1200.0, plunge_feed=300.0, ramp=20.0
+    )
+    cutting = [move for move in path.moves if move.kind is MoveKind.FEED]
+    assert cutting[-1].to == Point(4.0, 0.0)
+    assert cutting[-1].z == pytest.approx(-0.3)
+
+
+def test_a_ramp_costs_no_more_travel_than_the_stroke_itself() -> None:
+    plain = build_toolpath(CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0)
+    ramped = build_toolpath(
+        CutList.of([bar(0.0, length=10.0)]), feed=1200.0, plunge_feed=300.0, ramp=3.0
+    )
+    assert ramped.cut_length() == pytest.approx(plain.cut_length())

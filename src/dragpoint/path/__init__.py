@@ -6,6 +6,7 @@ that a stroke came from a letter.
 """
 
 from dragpoint.path.cut import Cut, CutList, PassOrder, expand_passes
+from dragpoint.path.lead import ramp_entry
 from dragpoint.path.order import OrderResult, order_cuts
 from dragpoint.path.plan import Move, MoveKind, Toolpath, build_toolpath
 
@@ -20,4 +21,5 @@ __all__ = [
     "build_toolpath",
     "expand_passes",
     "order_cuts",
+    "ramp_entry",
 ]

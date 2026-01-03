@@ -258,6 +258,7 @@ def compile_plate(
         safe=machine.safe,
         clearance=machine.clearance,
         hop_limit=machine.hop_limit,
+        ramp=machine.ramp,
         start=machine.origin,
     )
 

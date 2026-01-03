@@ -173,6 +173,7 @@ Compile a plate and print what the rules say about it.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
 | `--no-optimise` | Leave the travel order alone. |  |
@@ -210,6 +211,7 @@ Draw one plate as an SVG preview or a DXF.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
 | `--no-optimise` | Leave the travel order alone. |  |
@@ -249,6 +251,7 @@ Post the drilling for one plate as a program of its own.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
 | `--no-optimise` | Leave the travel order alone. |  |
@@ -287,6 +290,7 @@ Post one plate to a machine program.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
 | `--no-optimise` | Leave the travel order alone. |  |
@@ -327,6 +331,7 @@ Estimate how long one plate takes.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
 | `--no-optimise` | Leave the travel order alone. |  |

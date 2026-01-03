@@ -16,6 +16,11 @@ crossing the bed is what breaks cutters.
 The rule this uses is distance. A short hop stays at clearance; anything
 longer than the hop limit goes up to safe first. Between passes it always
 goes to safe, because that is where the operator will be watching from.
+
+``ramp`` is how far along the stroke the cutter takes to reach depth. Zero
+is a plain plunge, which is what a fine cutter in laminate wants. Anything
+else descends along the line and leaves the entry mark where the groove was
+going anyway.
 """
 
 from __future__ import annotations
@@ -27,7 +32,9 @@ from enum import StrEnum
 from dragpoint.errors import OutOfRange
 from dragpoint.geometry.box import Box
 from dragpoint.geometry.point import Point
+from dragpoint.geometry.stroke import Stroke
 from dragpoint.path.cut import CutList
+from dragpoint.path.lead import ramp_entry, ramped_remainder
 from dragpoint.units import QUANTUM
 
 __all__ = ["Move", "MoveKind", "Toolpath", "build_toolpath"]
@@ -40,6 +47,9 @@ DEFAULT_CLEARANCE = 0.5
 
 DEFAULT_HOP_LIMIT = 25.0
 """Millimetres of travel past which the head goes up to the safe height."""
+
+DEFAULT_RAMP = 0.0
+"""Millimetres of lead in. Zero is a plain plunge, which is the default."""
 
 ORIGIN = Point(0.0, 0.0)
 """Where the head is taken to be before the first move."""
@@ -154,6 +164,24 @@ class Toolpath:
         )
 
 
+def _entry(
+    stroke: Stroke, depth: float, ramp: float, feed: float, plunge_feed: float
+) -> list[Move]:
+    """Getting the cutter to depth, either straight down or along the line.
+
+    A plain plunge is one move at the plunge feed. A ramp is a plunge to the
+    surface followed by cutting moves that descend, and those are at the
+    cutting feed because that is what they are: cutting.
+    """
+    steps = ramp_entry(stroke, depth, ramp)
+    if len(steps) == 1:
+        point, reached = steps[0]
+        return [Move(MoveKind.PLUNGE, point, -reached, plunge_feed)]
+    moves = [Move(MoveKind.PLUNGE, steps[0][0], 0.0, plunge_feed)]
+    moves.extend(Move(MoveKind.FEED, point, -reached, feed) for point, reached in steps[1:])
+    return moves
+
+
 def build_toolpath(
     cuts: CutList,
     *,
@@ -162,6 +190,7 @@ def build_toolpath(
     safe: float = DEFAULT_SAFE,
     clearance: float = DEFAULT_CLEARANCE,
     hop_limit: float = DEFAULT_HOP_LIMIT,
+    ramp: float = DEFAULT_RAMP,
     start: Point = ORIGIN,
 ) -> Toolpath:
     """Turn an ordered list of cuts into moves.
@@ -177,6 +206,8 @@ def build_toolpath(
         raise OutOfRange("clearance", clearance, QUANTUM, safe)
     if hop_limit < 0.0:
         raise OutOfRange("hop limit", hop_limit, 0.0, float("inf"))
+    if ramp < 0.0:
+        raise OutOfRange("ramp", ramp, 0.0, float("inf"))
 
     moves: list[Move] = []
     here = start
@@ -193,10 +224,12 @@ def build_toolpath(
         if crossing > QUANTUM:
             moves.append(Move(MoveKind.RAPID, cut.start, height))
             here = cut.start
-        moves.append(Move(MoveKind.PLUNGE, cut.start, -cut.depth, plunge_feed))
+        moves.extend(_entry(cut.stroke, cut.depth, ramp, feed, plunge_feed))
         height = -cut.depth
-        for point in cut.stroke.points[1:]:
-            moves.append(Move(MoveKind.FEED, point, -cut.depth, feed))
+        remainder = ramped_remainder(cut.stroke, ramp)
+        if remainder is not None:
+            for point in remainder.points[1:]:
+                moves.append(Move(MoveKind.FEED, point, -cut.depth, feed))
         here = cut.end
         current_pass = cut.pass_index
 

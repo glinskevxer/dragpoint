@@ -37,6 +37,7 @@ def defaults(**overrides: Any) -> dict[str, Any]:
         "safe": "5mm",
         "clearance": "0.5mm",
         "hop": "25mm",
+        "ramp": "0mm",
         "no_optimise": False,
         "pass_order": "by-pass",
         "rapid_rate": 6000.0,
@@ -123,6 +124,7 @@ def test_the_setup_defaults_match_the_machine() -> None:
     assert setup.safe == 5.0
     assert setup.clearance == 0.5
     assert setup.hop_limit == 25.0
+    assert setup.ramp == 0.0
     assert setup.pass_order is PassOrder.BY_PASS
     assert setup.optimises
     assert setup.origin == Point(0.0, 0.0)
@@ -138,10 +140,11 @@ def test_the_pass_order_comes_through() -> None:
 
 
 def test_the_heights_take_units() -> None:
-    setup = setup_from_options(defaults(safe="0.5in", clearance="20thou", hop="2in"))
+    setup = setup_from_options(defaults(safe="0.5in", clearance="20thou", hop="2in", ramp="1mm"))
     assert setup.safe == pytest.approx(12.7)
     assert setup.clearance == pytest.approx(0.508)
     assert setup.hop_limit == pytest.approx(50.8)
+    assert setup.ramp == pytest.approx(1.0)
 
 
 def test_a_plate_with_no_arc_option_has_no_arc() -> None:
