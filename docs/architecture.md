@@ -40,7 +40,7 @@ import that would break it fails the build rather than the review.
 - **`dragpoint.path`** `cut`, `lead`, `order`, `plan`
 - **`dragpoint.post`** `base`, `iso`, `plotter`
 - **`dragpoint.compiler`** `drill`, `job`, `plate`, `settings`
-- **`dragpoint.draw`** `dxf`, `svg`
+- **`dragpoint.draw`** `dxf`, `sheet`, `svg`
 - **`dragpoint.estimate`** `cycle`
 - **`dragpoint.report`** `setup`
 - **`dragpoint.cli`** `common`, `crib`, `font`, `job`, `main`, `options`, `plate`

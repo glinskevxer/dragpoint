@@ -109,6 +109,8 @@ Lay the pieces out on the sheet the schedule names.
 | option | what it does | default |
 | --- | --- | --- |
 | `--no-rotate` | Keep every piece the way round it was drawn. |  |
+| `--out` | Draw the nest to this file instead of listing it. |  |
+| `--scale` | Pixels per millimetre. | `1.0` |
 
 ### `dragpoint job post SCHEDULE`
 

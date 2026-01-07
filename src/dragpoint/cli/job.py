@@ -24,6 +24,7 @@ from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
 from dragpoint.compiler.job import compile_job
 from dragpoint.compiler.plate import rule_selection
 from dragpoint.compiler.settings import MachineSetup
+from dragpoint.draw.sheet import render_nest
 from dragpoint.estimate.cycle import estimate_job
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
@@ -153,11 +154,21 @@ def time_job(schedule: Path, block_time: float) -> None:
 @job.command("nest")
 @SCHEDULE
 @click.option("--no-rotate", is_flag=True, help="Keep every piece the way round it was drawn.")
-def nest(schedule: Path, no_rotate: bool) -> None:
+@click.option(
+    "--out",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Draw the nest to this file instead of listing it.",
+)
+@click.option("--scale", default=1.0, show_default=True, help="Pixels per millimetre.")
+def nest(schedule: Path, no_rotate: bool, out: Path | None, scale: float) -> None:
     """Lay the pieces out on the sheet the schedule names."""
     with handled():
         spec = read_schedule(schedule)
         result = nest_job(spec, allow_rotation=not no_rotate)
+        if out is not None:
+            write_out(render_nest(result, scale=scale), out)
+            return
     for item in result:
         click.echo(str(item))
     click.echo(str(result))
