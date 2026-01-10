@@ -154,6 +154,7 @@ def time_job(schedule: Path, block_time: float) -> None:
 @job.command("nest")
 @SCHEDULE
 @click.option("--no-rotate", is_flag=True, help="Keep every piece the way round it was drawn.")
+@click.option("--first-fit", is_flag=True, help="Take the first row that fits, not the best.")
 @click.option(
     "--out",
     type=click.Path(dir_okay=False, path_type=Path),
@@ -161,11 +162,11 @@ def time_job(schedule: Path, block_time: float) -> None:
     help="Draw the nest to this file instead of listing it.",
 )
 @click.option("--scale", default=1.0, show_default=True, help="Pixels per millimetre.")
-def nest(schedule: Path, no_rotate: bool, out: Path | None, scale: float) -> None:
+def nest(schedule: Path, no_rotate: bool, first_fit: bool, out: Path | None, scale: float) -> None:
     """Lay the pieces out on the sheet the schedule names."""
     with handled():
         spec = read_schedule(schedule)
-        result = nest_job(spec, allow_rotation=not no_rotate)
+        result = nest_job(spec, allow_rotation=not no_rotate, best_fit=not first_fit)
         if out is not None:
             write_out(render_nest(result, scale=scale), out)
             return

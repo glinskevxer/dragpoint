@@ -174,3 +174,83 @@ def test_str_reads_like_a_line_on_a_cutting_list() -> None:
     text = str(nest_pieces([("A", 60.0, 20.0)] * 4, sheet()))
     assert "pieces in" in text
     assert text.endswith("all on")
+
+
+def three_rows() -> list[tuple[str, float, float]]:
+    """A tall row, a shorter row, then a piece that belongs in the shorter one.
+
+    The names are in the order the nest will take them, because pieces of
+    the same size are sorted by name and the point of the fixture is which
+    row is open when the last piece arrives.
+    """
+    return [
+        ("a-tall", 50.0, 40.0),
+        ("b-short", 50.0, 22.0),
+        ("c-fill", 30.0, 21.0),
+    ]
+
+
+def test_best_fit_puts_a_piece_in_the_row_that_suits_it() -> None:
+    narrow = sheet(width=100.0, height=200.0)
+    result = nest_pieces(three_rows(), narrow, allow_rotation=False)
+    rows = {item.plate: item.origin.y for item in result}
+    assert rows["c-fill"] == rows["b-short"]
+
+
+def test_first_fit_puts_the_same_piece_in_the_first_row_that_takes_it() -> None:
+    narrow = sheet(width=100.0, height=200.0)
+    result = nest_pieces(three_rows(), narrow, allow_rotation=False, best_fit=False)
+    rows = {item.plate: item.origin.y for item in result}
+    assert rows["c-fill"] == rows["a-tall"]
+
+
+def test_best_fit_wastes_less_row_height_than_first_fit() -> None:
+    narrow = sheet(width=100.0, height=200.0)
+    best = nest_pieces(three_rows(), narrow, allow_rotation=False)
+    first = nest_pieces(three_rows(), narrow, allow_rotation=False, best_fit=False)
+    assert best.row_waste() < first.row_waste()
+
+
+def test_both_ways_round_place_the_same_pieces() -> None:
+    narrow = sheet(width=100.0, height=200.0)
+    best = nest_pieces(three_rows(), narrow, allow_rotation=False)
+    first = nest_pieces(three_rows(), narrow, allow_rotation=False, best_fit=False)
+    assert {item.plate for item in best} == {item.plate for item in first}
+    assert best.used_area() == first.used_area()
+
+
+def test_a_tie_on_height_goes_to_the_row_with_the_least_room_left() -> None:
+    narrow = sheet(width=100.0, height=200.0, kerf=0.0)
+    pieces = [("a", 50.0, 30.0), ("b", 60.0, 30.0), ("c", 25.0, 30.0)]
+    result = nest_pieces(pieces, narrow, allow_rotation=False)
+    rows = {item.plate: item.origin.y for item in result}
+    assert rows["c"] == rows["b"]
+    assert rows["c"] != rows["a"]
+
+
+def test_a_nest_where_nothing_stands_short_wastes_no_row_height() -> None:
+    result = nest_pieces([("A", 40.0, 20.0), ("B", 40.0, 20.0)], sheet(), allow_rotation=False)
+    assert result.row_waste() == 0.0
+
+
+def test_row_waste_counts_the_area_above_a_short_piece() -> None:
+    result = nest_pieces([("A", 40.0, 30.0), ("B", 40.0, 20.0)], sheet(), allow_rotation=False)
+    assert result.row_waste() == pytest.approx(40.0 * 10.0)
+
+
+def test_an_empty_nest_wastes_nothing() -> None:
+    assert nest_pieces([], sheet()).row_waste() == 0.0
+
+
+def test_a_job_can_ask_for_the_plain_first_fit_nest() -> None:
+    spec = JobSpec(
+        name="J",
+        plates=tuple(
+            PlateSpec(name=name, width=width, height=height, stock="LAM16-BW", lines=("A",))
+            for name, width, height in three_rows()
+        ),
+        sheet=sheet(width=100.0, height=200.0),
+    )
+    best = nest_job(spec, allow_rotation=False)
+    first = nest_job(spec, allow_rotation=False, best_fit=False)
+    assert best.row_waste() < first.row_waste()
