@@ -203,3 +203,45 @@ def test_a_rule_name_nobody_recognises_is_reported_rather_than_raised() -> None:
     )
     assert compile_job(job).ok
     assert rule_selection(job).unknown_names() == ("no-such-rule",)
+
+
+def test_a_numbered_run_compiles_one_plate_per_piece() -> None:
+    made = compile_job(
+        JobSpec(
+            name="tags",
+            plates=(plate_spec(name="VLV", lines=("VLV-{n:03}",), quantity=4),),
+        )
+    )
+    assert len(made) == 4
+    assert [plate.name for plate in made] == ["VLV-1", "VLV-2", "VLV-3", "VLV-4"]
+
+
+def test_each_piece_of_a_run_gets_its_own_number_cut_into_it() -> None:
+    made = compile_job(
+        JobSpec(
+            name="tags",
+            plates=(plate_spec(name="VLV", lines=("VLV-{n:03}",), quantity=3),),
+        )
+    )
+    assert [plate.lines[0] for plate in made] == ["VLV-001", "VLV-002", "VLV-003"]
+
+
+def test_a_numbered_run_still_counts_as_the_pieces_it_asked_for() -> None:
+    job = JobSpec(
+        name="tags",
+        plates=(plate_spec(name="VLV", lines=("VLV-{n}",), quantity=5),),
+    )
+    made = compile_job(job)
+    assert made.stock_usage() == {"LAM16-BW": 5}
+    assert made.piece_count() == 5
+
+
+def test_a_run_of_identical_plates_is_still_compiled_once() -> None:
+    made = compile_job(
+        JobSpec(
+            name="plain",
+            plates=(plate_spec(name="P-1", lines=("RUN",), quantity=5),),
+        )
+    )
+    assert len(made) == 1
+    assert made.piece_count() == 5

@@ -39,6 +39,9 @@ ALIASES: dict[str, str] = {
     "no": "quantity",
     "number": "quantity",
     "off": "quantity",
+    "start": "sequence_start",
+    "first": "sequence_start",
+    "from": "sequence_start",
     "material": "stock",
     "sheet": "stock",
     "cap": "cap_height",
@@ -126,13 +129,15 @@ def _plate_of(
         if key in ("width", "height") or not row.get(key, "").strip():
             continue
         values[key] = _length(source, where, key, row[key])
-    if row.get("quantity", "").strip():
+    for whole in ("quantity", "sequence_start"):
+        if not row.get(whole, "").strip():
+            continue
         try:
-            values["quantity"] = int(float(row["quantity"]))
-        except ValueError as exc:
+            values[whole] = int(float(row[whole]))
+        except ValueError as bad:
             raise SpecError(
-                source, where, f"quantity: {row['quantity']!r} is not a number"
-            ) from exc
+                source, where, f"{whole.replace('_', ' ')}: {row[whole]!r} is not a number"
+            ) from bad
     lines = _lines_of(row)
     if lines:
         values["lines"] = lines

@@ -45,6 +45,7 @@ _PLATE_PLAIN = (
     "kerning",
     "mirror",
     "quantity",
+    "sequence_start",
     "notes",
     "arc_start",
     "arc_sweep",

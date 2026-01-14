@@ -15,7 +15,7 @@ chips if a groove runs into it.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from dragpoint.errors import OutOfRange
 from dragpoint.geometry.arc import ArcMap
@@ -24,6 +24,7 @@ from dragpoint.geometry.point import Point
 from dragpoint.spec.feature import Feature
 from dragpoint.text.fit import FitPolicy
 from dragpoint.text.layout import HAlign, VAlign
+from dragpoint.text.sequence import is_sequenced, sequence_lines
 from dragpoint.text.style import TextStyle
 from dragpoint.units import QUANTUM
 
@@ -40,6 +41,9 @@ DEFAULT_CAP_HEIGHT = 3.0
 
 DEFAULT_ARC_SWEEP = 180.0
 """Degrees a legend on an arc may take up before it is too far round."""
+
+DEFAULT_SEQUENCE_START = 1
+"""The number the first piece of a numbered run carries."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +78,7 @@ class PlateSpec:
     depth: float | None = None
     cutter: str | None = None
     quantity: int = 1
+    sequence_start: int = DEFAULT_SEQUENCE_START
     border: float | None = None
     wrap: bool = False
     arc_radius: float | None = None
@@ -122,6 +127,40 @@ class PlateSpec:
         for line in self.lines:
             if "\n" in line:
                 raise ValueError(f"{self.name} has a line with a newline in it")
+
+    @property
+    def sequenced(self) -> bool:
+        """True when the legend counts and the pieces are not identical."""
+        return is_sequenced(self.lines)
+
+    def piece(self, number: int) -> PlateSpec:
+        """One piece of a numbered run, as a plate of its own.
+
+        The name carries the number as well as the legend, because the piece
+        is a separate plate from here on: it has its own program, its own
+        line on the setup sheet, and somebody has to be able to say which of
+        the twenty four came out wrong.
+        """
+        if not self.sequenced:
+            return self
+        return replace(
+            self,
+            name=f"{self.name}-{number}",
+            lines=sequence_lines(
+                self.lines,
+                piece=number,
+                quantity=self.quantity,
+                plate=self.name,
+            ),
+            quantity=1,
+        )
+
+    def pieces(self) -> tuple[PlateSpec, ...]:
+        """Every piece this spec stands for, which is usually just itself."""
+        if not self.sequenced:
+            return (self,)
+        first = self.sequence_start
+        return tuple(self.piece(number) for number in range(first, first + self.quantity))
 
     def outline(self) -> Box:
         """The blank, with its lower left corner on the origin."""

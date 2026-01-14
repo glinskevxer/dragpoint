@@ -8,6 +8,12 @@ plate would get the second one subtly wrong.
 Quantities are counted here and nowhere else. A plate with a quantity of six
 is compiled once, because the six are identical, and the six only exist in
 the totals and in what the machine is told to repeat.
+
+A numbered run is the exception and it is the reason this is not as simple as
+it looks. Six plates that say VLV-001 to VLV-006 are six different programs,
+so the spec is asked for its pieces first and each piece is compiled on its
+own. Everything downstream then sees six plates of one, which is what they
+are, and no total has to be adjusted afterwards to make up for it.
 """
 
 from __future__ import annotations
@@ -106,6 +112,8 @@ def compile_job(
     """Compile every plate in ``job``."""
     machine = setup or MachineSetup()
     plates = tuple(
-        compile_plate(spec, job=job, setup=machine, selection=selection) for spec in job.plates
+        compile_plate(piece, job=job, setup=machine, selection=selection)
+        for spec in job.plates
+        for piece in spec.pieces()
     )
     return EngravedJob(spec=job, plates=plates)
