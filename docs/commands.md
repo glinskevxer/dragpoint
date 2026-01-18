@@ -40,6 +40,7 @@ List the stock on the rack.
 | option | what it does | default |
 | --- | --- | --- |
 | `--json` | Print as JSON. |  |
+| `--rack` | Read the rack from this file instead of the shipped one. |  |
 
 ## `dragpoint font`
 

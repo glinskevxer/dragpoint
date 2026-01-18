@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -77,3 +78,34 @@ def test_the_rules_json_carries_the_severity(runner: CliRunner) -> None:
     payload = json.loads(run(runner, "crib", "rules", "--json").output)
     assert payload["stroke-merge"]["severity"] == "error"
     assert payload["odd-lettering-height"]["severity"] == "note"
+
+
+def test_the_rack_can_come_from_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "rack.toml"
+    target.write_text(
+        "[SHOP-10]\n"
+        'description = "shop laminate"\n'
+        "thickness = 1.0\n"
+        "cap = 0.1\n"
+        "nominal = 0.2\n"
+        "per_pass = 0.3\n"
+        "feed = 900.0\n"
+        "plunge = 200.0\n"
+        "spindle = 11000\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "crib", "stock", "--rack", str(target))
+    assert result.exit_code == 0
+    assert len(lines(result)) == 1
+    assert "SHOP-10" in result.output
+    assert "shop laminate" in result.output
+
+
+def test_a_rack_file_that_is_wrong_is_a_message_and_not_a_traceback(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    target = tmp_path / "rack.toml"
+    target.write_text("", encoding="utf-8")
+    result = run(runner, "crib", "stock", "--rack", str(target))
+    assert result.exit_code != 0
+    assert "no stock in this file" in result.output

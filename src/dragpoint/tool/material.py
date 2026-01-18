@@ -13,17 +13,32 @@ it will show at any depth the cutter can reach.
 Getting the floor wrong is the expensive mistake. A plate cut a hundredth
 short of the cap reads perfectly under the shop lights and disappears on the
 panel, and by then it has been screwed down.
+
+The rack itself is a file rather than a table in here. Stock is bought, and
+the shop that buys it is the one that knows what it cut at: a new colour of
+laminate arriving on a Tuesday should not need anybody to edit Python. The
+shipped file is what this shop runs, and ``load_rack`` reads somebody
+else's.
 """
 
 from __future__ import annotations
 
 import math
+import tomllib
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
-from dragpoint.errors import OutOfRange
+from dragpoint.errors import OutOfRange, StockError
 from dragpoint.units import QUANTUM
 
-__all__ = ["MATERIALS", "Material", "material"]
+__all__ = ["MATERIALS", "Material", "load_rack", "material", "parse_rack"]
+
+RACK_FILE = Path(__file__).resolve().parent / "stock" / "rack.toml"
+"""The rack this shop runs, shipped inside the package."""
+
+REQUIRED = ("description", "thickness", "nominal", "per_pass", "feed", "plunge", "spindle")
+"""What every entry in a rack file has to say. ``cap`` is the only option."""
 
 BREAK_THROUGH = 0.05
 """Millimetres past the cap that guarantees a clean colour change."""
@@ -105,99 +120,66 @@ class Material:
         return f"{self.name} ({self.description}, {self.thickness:g}mm, {kind})"
 
 
-MATERIALS: dict[str, Material] = {
-    sheet.name: sheet
-    for sheet in (
-        Material(
-            name="LAM16-BW",
-            description="black on white laminate",
-            thickness=1.6,
-            cap=0.13,
-            nominal_depth=0.25,
-            max_depth_per_pass=0.35,
-            feed=1200.0,
-            plunge_feed=300.0,
-            spindle=12000,
-        ),
-        Material(
-            name="LAM16-WB",
-            description="white on black laminate",
-            thickness=1.6,
-            cap=0.13,
-            nominal_depth=0.25,
-            max_depth_per_pass=0.35,
-            feed=1200.0,
-            plunge_feed=300.0,
-            spindle=12000,
-        ),
-        Material(
-            name="LAM32-RW",
-            description="red on white laminate",
-            thickness=3.2,
-            cap=0.25,
-            nominal_depth=0.40,
-            max_depth_per_pass=0.35,
-            feed=1000.0,
-            plunge_feed=250.0,
-            spindle=12000,
-        ),
-        Material(
-            name="LAM32-YB",
-            description="yellow on black laminate",
-            thickness=3.2,
-            cap=0.25,
-            nominal_depth=0.40,
-            max_depth_per_pass=0.35,
-            feed=1000.0,
-            plunge_feed=250.0,
-            spindle=12000,
-        ),
-        Material(
-            name="ANOD-10",
-            description="anodised aluminium",
-            thickness=1.0,
-            cap=0.02,
-            nominal_depth=0.10,
-            max_depth_per_pass=0.10,
-            feed=600.0,
-            plunge_feed=120.0,
-            spindle=15000,
-        ),
-        Material(
-            name="ACRYL-30",
-            description="clear acrylic",
-            thickness=3.0,
-            cap=None,
-            nominal_depth=0.50,
-            max_depth_per_pass=0.50,
-            feed=900.0,
-            plunge_feed=200.0,
-            spindle=14000,
-        ),
-        Material(
-            name="BRASS-15",
-            description="half hard brass",
-            thickness=1.5,
-            cap=None,
-            nominal_depth=0.15,
-            max_depth_per_pass=0.08,
-            feed=250.0,
-            plunge_feed=60.0,
-            spindle=8000,
-        ),
-        Material(
-            name="STAIN-10",
-            description="304 stainless",
-            thickness=1.0,
-            cap=None,
-            nominal_depth=0.08,
-            max_depth_per_pass=0.04,
-            feed=120.0,
-            plunge_feed=30.0,
-            spindle=6000,
-        ),
-    )
-}
+def parse_rack(text: str, *, source: str = "rack") -> dict[str, Material]:
+    """Read a rack out of the text of a rack file.
+
+    Every table in the file is one stock code, and the code is the table
+    name. A file with nothing in it is refused rather than treated as an
+    empty rack: an empty rack means every plate in every job fails on stock
+    it cannot find, which is a confusing way to be told a file is wrong.
+    """
+    try:
+        loaded = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as bad:
+        raise StockError(source, "", f"this is not a rack file: {bad}") from bad
+    if not loaded:
+        raise StockError(source, "", "there is no stock in this file")
+    rack: dict[str, Material] = {}
+    for code, entry in loaded.items():
+        if not isinstance(entry, dict):
+            raise StockError(source, code, "this should be a table of numbers")
+        rack[code] = _sheet(source, code, entry)
+    return rack
+
+
+def load_rack(path: Path | str) -> dict[str, Material]:
+    """Read a rack from a file on disk."""
+    resolved = Path(path)
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except OSError as bad:
+        raise StockError(str(resolved), "", f"cannot read the file: {bad}") from bad
+    return parse_rack(text, source=str(resolved))
+
+
+def _sheet(source: str, code: str, entry: dict[str, Any]) -> Material:
+    """One entry, checked and turned into a sheet."""
+    missing = [key for key in REQUIRED if key not in entry]
+    if missing:
+        raise StockError(source, code, f"nothing says {', '.join(missing)}")
+    extra = set(entry) - set(REQUIRED) - {"cap"}
+    if extra:
+        raise StockError(source, code, f"nothing here uses {', '.join(sorted(extra))}")
+    try:
+        sheet = Material(
+            name=code,
+            description=str(entry["description"]),
+            thickness=float(entry["thickness"]),
+            cap=None if entry.get("cap") is None else float(entry["cap"]),
+            nominal_depth=float(entry["nominal"]),
+            max_depth_per_pass=float(entry["per_pass"]),
+            feed=float(entry["feed"]),
+            plunge_feed=float(entry["plunge"]),
+            spindle=int(entry["spindle"]),
+        )
+    except (TypeError, ValueError) as bad:
+        raise StockError(source, code, f"one of these is not a number: {bad}") from bad
+    except OutOfRange as bad:
+        raise StockError(source, code, str(bad)) from bad
+    return sheet
+
+
+MATERIALS: dict[str, Material] = load_rack(RACK_FILE)
 """What the rack holds. Names are the ones on the stock label."""
 
 

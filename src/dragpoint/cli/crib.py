@@ -8,13 +8,15 @@ answering yes or no.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import click
 
-from dragpoint.cli.common import echo_json
+from dragpoint.cli.common import echo_json, handled
 from dragpoint.post.base import POSTS
 from dragpoint.rules.check import REGISTRY
 from dragpoint.tool.cutter import CATALOGUE
-from dragpoint.tool.material import MATERIALS
+from dragpoint.tool.material import MATERIALS, Material, load_rack
 
 __all__ = ["crib"]
 
@@ -55,8 +57,18 @@ def cutters(as_json: bool) -> None:
 
 @crib.command("stock")
 @click.option("--json", "as_json", is_flag=True, help="Print as JSON.")
-def stock(as_json: bool) -> None:
+@click.option(
+    "--rack",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Read the rack from this file instead of the shipped one.",
+)
+def stock(as_json: bool, rack: Path | None) -> None:
     """List the stock on the rack."""
+    sheets: dict[str, Material] = MATERIALS
+    if rack is not None:
+        with handled():
+            sheets = load_rack(rack)
     if as_json:
         echo_json(
             {
@@ -70,12 +82,12 @@ def stock(as_json: bool) -> None:
                     "plunge_feed": sheet.plunge_feed,
                     "spindle": sheet.spindle,
                 }
-                for name, sheet in MATERIALS.items()
+                for name, sheet in sheets.items()
             }
         )
         return
-    for name in sorted(MATERIALS):
-        sheet = MATERIALS[name]
+    for name in sorted(sheets):
+        sheet = sheets[name]
         low, high = sheet.depth_window()
         click.echo(
             f"{name:<10} {sheet.thickness:>4.1f}mm  "

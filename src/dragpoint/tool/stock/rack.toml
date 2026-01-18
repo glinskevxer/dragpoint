@@ -1,0 +1,91 @@
+# What the rack holds.
+#
+# Names are the ones printed on the stock label, because that is what the
+# drawing office writes on a schedule and what the operator reads off the
+# sheet before it goes on the bed.
+#
+# thickness, cap and nominal are millimetres. cap is left out for solid
+# stock, which has no cap to cut through and therefore no floor on the
+# depth. feed and plunge are millimetres per minute, and spindle is rpm,
+# because those are the units the controllers take.
+#
+# The numbers here are what this shop cuts, arrived at by cutting it. A
+# shop with a different spindle or a different cutter supplier wants its
+# own file, which is why this is a file rather than a table in the source.
+
+[LAM16-BW]
+description = "black on white laminate"
+thickness = 1.6
+cap = 0.13
+nominal = 0.25
+per_pass = 0.35
+feed = 1200.0
+plunge = 300.0
+spindle = 12000
+
+[LAM16-WB]
+description = "white on black laminate"
+thickness = 1.6
+cap = 0.13
+nominal = 0.25
+per_pass = 0.35
+feed = 1200.0
+plunge = 300.0
+spindle = 12000
+
+[LAM32-RW]
+description = "red on white laminate"
+thickness = 3.2
+cap = 0.25
+nominal = 0.40
+per_pass = 0.35
+feed = 1000.0
+plunge = 250.0
+spindle = 12000
+
+[LAM32-YB]
+description = "yellow on black laminate"
+thickness = 3.2
+cap = 0.25
+nominal = 0.40
+per_pass = 0.35
+feed = 1000.0
+plunge = 250.0
+spindle = 12000
+
+[ANOD-10]
+description = "anodised aluminium"
+thickness = 1.0
+cap = 0.02
+nominal = 0.10
+per_pass = 0.10
+feed = 600.0
+plunge = 120.0
+spindle = 15000
+
+[ACRYL-30]
+description = "clear acrylic"
+thickness = 3.0
+nominal = 0.50
+per_pass = 0.50
+feed = 900.0
+plunge = 200.0
+spindle = 14000
+
+[BRASS-15]
+description = "half hard brass"
+thickness = 1.5
+nominal = 0.15
+per_pass = 0.08
+feed = 250.0
+plunge = 60.0
+spindle = 8000
+
+[STAIN-10]
+description = "304 stainless"
+thickness = 1.0
+nominal = 0.08
+per_pass = 0.04
+feed = 120.0
+plunge = 30.0
+spindle = 6000

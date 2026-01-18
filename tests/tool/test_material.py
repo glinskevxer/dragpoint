@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from dragpoint.errors import OutOfRange
-from dragpoint.tool.material import BACKING_LEFT, BREAK_THROUGH, MATERIALS, Material, material
+from dragpoint.errors import OutOfRange, StockError
+from dragpoint.tool.material import (
+    BACKING_LEFT,
+    BREAK_THROUGH,
+    MATERIALS,
+    RACK_FILE,
+    Material,
+    load_rack,
+    material,
+    parse_rack,
+)
 
 
 def two_ply() -> Material:
@@ -160,3 +171,98 @@ def test_an_unknown_stock_code_lists_what_the_rack_holds() -> None:
 def test_str_reads_like_a_stock_label() -> None:
     assert str(two_ply()) == "LAM16-BW (black on white laminate, 1.6mm, 0.13mm cap)"
     assert str(solid()) == "ACRYL-30 (clear acrylic, 3mm, solid)"
+
+
+ONE_SHEET = """
+[LAM16-BW]
+description = "black on white laminate"
+thickness = 1.6
+cap = 0.13
+nominal = 0.25
+per_pass = 0.35
+feed = 1200.0
+plunge = 300.0
+spindle = 12000
+"""
+
+
+def test_the_shipped_rack_is_what_the_package_hands_out() -> None:
+    assert load_rack(RACK_FILE) == MATERIALS
+
+
+def test_the_shipped_rack_holds_the_stock_the_shop_cuts() -> None:
+    assert "LAM16-BW" in MATERIALS
+    assert "BRASS-15" in MATERIALS
+
+
+def test_a_rack_of_one_sheet_reads() -> None:
+    rack = parse_rack(ONE_SHEET)
+    assert list(rack) == ["LAM16-BW"]
+    assert rack["LAM16-BW"].thickness == 1.6
+
+
+def test_the_code_comes_from_the_table_name() -> None:
+    assert parse_rack(ONE_SHEET)["LAM16-BW"].name == "LAM16-BW"
+
+
+def test_a_sheet_with_no_cap_is_solid() -> None:
+    text = ONE_SHEET.replace("cap = 0.13\n", "")
+    assert parse_rack(text)["LAM16-BW"].cap is None
+    assert not parse_rack(text)["LAM16-BW"].is_two_ply
+
+
+def test_a_file_that_is_not_a_rack_file_is_a_message() -> None:
+    with pytest.raises(StockError, match="not a rack file"):
+        parse_rack("this is not toml at all [[[")
+
+
+def test_an_empty_file_is_refused() -> None:
+    with pytest.raises(StockError, match="no stock in this file"):
+        parse_rack("")
+
+
+def test_a_stock_code_that_is_not_a_table_is_refused() -> None:
+    with pytest.raises(StockError, match="table of numbers"):
+        parse_rack('LAM16-BW = "black on white"')
+
+
+def test_a_missing_number_names_the_stock_and_the_number() -> None:
+    text = ONE_SHEET.replace("feed = 1200.0\n", "")
+    with pytest.raises(StockError, match=r"LAM16-BW.*nothing says feed"):
+        parse_rack(text)
+
+
+def test_a_key_nobody_uses_is_refused_rather_than_ignored() -> None:
+    text = ONE_SHEET + 'colour = "black"\n'
+    with pytest.raises(StockError, match="nothing here uses colour"):
+        parse_rack(text)
+
+
+def test_a_number_that_is_not_a_number_names_the_stock() -> None:
+    text = ONE_SHEET.replace("thickness = 1.6", 'thickness = "thin"')
+    with pytest.raises(StockError, match="LAM16-BW"):
+        parse_rack(text)
+
+
+def test_a_sheet_whose_numbers_do_not_work_names_the_stock() -> None:
+    text = ONE_SHEET.replace("cap = 0.13", "cap = 1.5")
+    with pytest.raises(StockError, match="LAM16-BW"):
+        parse_rack(text)
+
+
+def test_a_rack_reads_off_disk(tmp_path: Path) -> None:
+    target = tmp_path / "rack.toml"
+    target.write_text(ONE_SHEET, encoding="utf-8")
+    assert list(load_rack(target)) == ["LAM16-BW"]
+
+
+def test_a_rack_that_is_not_there_says_so(tmp_path: Path) -> None:
+    with pytest.raises(StockError, match="cannot read the file"):
+        load_rack(tmp_path / "gone.toml")
+
+
+def test_the_source_of_a_message_is_the_file_it_came_from(tmp_path: Path) -> None:
+    target = tmp_path / "rack.toml"
+    target.write_text("", encoding="utf-8")
+    with pytest.raises(StockError, match="rack.toml"):
+        load_rack(target)

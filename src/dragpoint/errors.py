@@ -17,6 +17,7 @@ __all__ = [
     "MissingGlyph",
     "OutOfRange",
     "SpecError",
+    "StockError",
 ]
 
 
@@ -115,4 +116,23 @@ class SpecError(DragpointError):
 
     def __str__(self) -> str:
         place = f"{self.source} [{self.where}]" if self.where else self.source
+        return f"{place}: {self.why}"
+
+
+class StockError(DragpointError):
+    """A rack file that does not describe a sheet, and which entry it was.
+
+    A rack is edited by whoever buys the material rather than by whoever
+    wrote this, so the message has to say which stock code was wrong and
+    what was wrong with it without any of the words a programmer would use.
+    """
+
+    def __init__(self, source: str, code: str, why: str) -> None:
+        super().__init__(source, code, why)
+        self.source = source
+        self.code = code
+        self.why = why
+
+    def __str__(self) -> str:
+        place = f"{self.source} [{self.code}]" if self.code else self.source
         return f"{place}: {self.why}"
