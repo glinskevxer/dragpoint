@@ -29,6 +29,7 @@ from dragpoint.estimate.cycle import estimate_job
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
 from dragpoint.report.setup import setup_sheet
+from dragpoint.report.traveller import travellers
 from dragpoint.spec.job import JobSpec
 from dragpoint.spec.load import load_job
 from dragpoint.spec.sheetload import load_csv_job
@@ -202,6 +203,19 @@ def sheet(schedule: Path, out: Path | None, no_nest: bool) -> None:
         made = compile_job(spec)
         nest = None if no_nest or spec.sheet is None else nest_job(spec)
         text = setup_sheet(made, nest=nest)
+    write_out(text, out)
+
+
+@job.command("cards")
+@SCHEDULE
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.option("--plate", "only", default=None, help="Just the card for this plate.")
+def cards(schedule: Path, out: Path | None, only: str | None) -> None:
+    """Write the travellers that go round the shop with the work."""
+    with handled():
+        made = compile_job(read_schedule(schedule))
+        wanted = (made.plate(only),) if only else tuple(made)
+        text = travellers(wanted)
     write_out(text, out)
 
 

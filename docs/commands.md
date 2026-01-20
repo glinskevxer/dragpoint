@@ -83,6 +83,15 @@ Show one face and what it covers.
 
 Work on a whole job.
 
+### `dragpoint job cards SCHEDULE`
+
+Write the travellers that go round the shop with the work.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--out` |  |  |
+| `--plate` | Just the card for this plate. |  |
+
 ### `dragpoint job check SCHEDULE`
 
 Compile a schedule and print what the rules say.

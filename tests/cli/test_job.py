@@ -328,3 +328,28 @@ def test_the_suffix_decides_which_reader_runs(runner: CliRunner, tmp_path: Path)
     result = run(runner, "job", "check", str(misnamed))
     assert result.exit_code == 1
     assert "not readable as TOML" in result.output
+
+
+def test_cards_writes_one_traveller_per_plate(runner: CliRunner) -> None:
+    result = run(runner, "job", "cards", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert result.output.count("TRAVELLER") == 7
+
+
+def test_cards_can_be_asked_for_one_plate(runner: CliRunner) -> None:
+    result = run(runner, "job", "cards", str(EXAMPLE), "--plate", "P-110")
+    assert result.exit_code == 0
+    assert result.output.count("TRAVELLER") == 1
+    assert "P-110" in result.output
+
+
+def test_cards_for_a_plate_nobody_has_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "job", "cards", str(EXAMPLE), "--plate", "NOPE")
+    assert result.exit_code != 0
+
+
+def test_cards_write_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "cards.txt"
+    result = run(runner, "job", "cards", str(EXAMPLE), "--out", str(target))
+    assert result.exit_code == 0
+    assert "TRAVELLER" in target.read_text(encoding="utf-8")
