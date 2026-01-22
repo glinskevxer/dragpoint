@@ -146,3 +146,34 @@ def test_the_first_pen_down_is_findable() -> None:
 
 def test_a_path_that_never_cuts_has_no_first_pen_down() -> None:
     assert first_pen_down(Toolpath()) is None
+
+
+def test_one_blank_is_the_moves_once() -> None:
+    text = render_plotter(path_of(two_cuts()), PostOptions())
+    assert text.count("PD") == 5
+
+
+def test_a_fixture_writes_the_moves_once_per_blank() -> None:
+    one = render_plotter(path_of(two_cuts()), PostOptions())
+    three = render_plotter(path_of(two_cuts()), PostOptions(repeats=3, pitch_x=45.0))
+    assert three.count("PD") == 3 * one.count("PD")
+
+
+def test_the_second_blank_is_written_at_its_offset() -> None:
+    text = render_plotter(path_of(two_cuts()), PostOptions(repeats=2, pitch_x=45.0))
+    assert "PD2200,0" in text
+
+
+def test_the_depth_setting_is_not_repeated_for_every_blank() -> None:
+    text = render_plotter(path_of(two_cuts()), PostOptions(repeats=4, pitch_x=45.0))
+    assert text.count("!DEP") == 1
+
+
+def test_a_repeated_program_still_ends_once() -> None:
+    text = render_plotter(path_of(two_cuts()), PostOptions(repeats=3, pitch_x=45.0))
+    assert text.count("!END") == 1
+
+
+def test_the_pen_comes_up_at_the_end_of_every_blank() -> None:
+    text = render_plotter(path_of(two_cuts()), PostOptions(repeats=2, pitch_x=45.0))
+    assert text.count("PU;") >= 2

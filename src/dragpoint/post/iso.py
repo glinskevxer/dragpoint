@@ -9,6 +9,11 @@ Modal words are dropped when they have not changed. That is not a saving in
 file size worth having on its own; it is a saving in what an operator has to
 read when they scroll through the program looking for the one line where the
 depth is wrong.
+
+A fixture full of blanks comes out as a subprogram called once per blank
+with a work shift in front of it. That is the whole reason a control has
+subprograms, and it means twelve plates are one copy of the moves rather
+than twelve, so the one place to fix a wrong depth stays one place.
 """
 
 from __future__ import annotations
@@ -19,14 +24,45 @@ from dragpoint.post.base import PostOptions, post
 __all__ = ["render_iso"]
 
 
+SHIFT_OFF = "G52 X0 Y0"
+"""Cancelling the work shift, which is left set otherwise."""
+
+
 @post("iso", "ISO G code, absolute and metric", "nc")
 def render_iso(path: Toolpath, options: PostOptions) -> str:
     """Render a toolpath as G code."""
     lines: list[str] = []
     _preamble(lines, options)
-    _body(lines, path, options)
+    if options.repeats > 1:
+        _calls(lines, options)
+    else:
+        _body(lines, path, options)
     _postamble(lines, options)
+    if options.repeats > 1:
+        lines.append(f"O{_sub_number(options)}")
+        _body(lines, path, options)
+        lines.append("M99")
+        lines.append("%")
     return _numbered(lines, options)
+
+
+def _sub_number(options: PostOptions) -> int:
+    """The number the repeated moves are filed under.
+
+    One past the main program, which is what everybody does and what an
+    operator looking for it will try first.
+    """
+    return options.number + 1
+
+
+def _calls(lines: list[str], options: PostOptions) -> None:
+    """One shift and one call per blank in the fixture."""
+    sub = _sub_number(options)
+    for x, y in options.offsets():
+        shift = f"G52 X{options.coordinate(x)} Y{options.coordinate(y)}"
+        lines.append(SHIFT_OFF if (x, y) == (0.0, 0.0) else shift)
+        lines.append(f"M98 P{sub}")
+    lines.append(SHIFT_OFF)
 
 
 def _preamble(lines: list[str], options: PostOptions) -> None:
@@ -43,11 +79,16 @@ def _preamble(lines: list[str], options: PostOptions) -> None:
 
 
 def _postamble(lines: list[str], options: PostOptions) -> None:
-    """Stop the spindle and end the program."""
+    """Stop the spindle and end the program.
+
+    The trailing percent goes after the subprograms rather than here when
+    there are any, because a control stops reading the file at it.
+    """
     if options.spindle:
         lines.append("M05")
     lines.append("M30")
-    lines.append("%")
+    if options.repeats == 1:
+        lines.append("%")
 
 
 def _body(lines: list[str], path: Toolpath, options: PostOptions) -> None:

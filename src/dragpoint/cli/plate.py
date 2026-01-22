@@ -65,6 +65,9 @@ def check(context: click.Context, /, quiet: bool, as_json: bool, **options: obje
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
 @click.option("--program-number", default=1000, show_default=True)
 @click.option("--line-numbers", is_flag=True, help="Number the blocks.")
+@click.option("--repeats", default=1, show_default=True, help="Blanks on the fixture.")
+@click.option("--pitch", default="0mm", show_default=True, help="Step between blanks in x.")
+@click.option("--pitch-y", default="0mm", show_default=True, help="Step between blanks in y.")
 @click.option("--force", is_flag=True, help="Post it even if the rules found an error.")
 @click.pass_context
 def post_plate(
@@ -74,6 +77,9 @@ def post_plate(
     out: Path | None,
     program_number: int,
     line_numbers: bool,
+    repeats: int,
+    pitch: str,
+    pitch_y: str,
     force: bool,
     **options: object,
 ) -> None:
@@ -88,17 +94,18 @@ def post_plate(
     if not made.ok and not force:
         echo_report(made.report)
         raise click.ClickException("the plate has errors, pass --force to post it anyway")
-    text = render(
-        post_name,
-        made.toolpath,
-        PostOptions(
+    with handled():
+        settings = PostOptions(
             program=spec.name,
             number=program_number,
             spindle=made.stock.spindle,
             line_numbers=line_numbers,
+            repeats=repeats,
+            pitch_x=parse_length(pitch),
+            pitch_y=parse_length(pitch_y),
             notes=(f"{made.cutter.name} in {made.stock.name} at {made.depth:.3f}mm",),
-        ),
-    )
+        )
+    text = render(post_name, made.toolpath, settings)
     write_out(text, out)
     context.exit(exit_code_for(made.report))
 

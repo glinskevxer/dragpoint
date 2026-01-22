@@ -313,6 +313,9 @@ Post one plate to a machine program.
 | `--out` |  |  |
 | `--program-number` |  | `1000` |
 | `--line-numbers` | Number the blocks. |  |
+| `--repeats` | Blanks on the fixture. | `1` |
+| `--pitch` | Step between blanks in x. | `0mm` |
+| `--pitch-y` | Step between blanks in y. | `0mm` |
 | `--force` | Post it even if the rules found an error. |  |
 
 ### `dragpoint plate time [LINES...]`

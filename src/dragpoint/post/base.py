@@ -10,6 +10,11 @@ Two posts ship. The ISO one writes G code for the controls that take it. The
 plotter one writes the pen up and pen down language the older engraving
 machines speak, which has no Z axis at all and expresses depth as a tool
 setting made once at the top of the file.
+
+Repeats are a post's business and not the toolpath's. A fixture holding
+twelve blanks in a row is twelve copies of one program at twelve offsets,
+and which of those the file expresses as a subprogram call and which it
+writes out longhand depends entirely on what the control can do.
 """
 
 from __future__ import annotations
@@ -17,9 +22,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from dragpoint.errors import OutOfRange
 from dragpoint.path.plan import Toolpath
 
 __all__ = [
+    "MAX_REPEATS",
     "POSTS",
     "PostDef",
     "PostOptions",
@@ -27,6 +34,10 @@ __all__ = [
     "post_names",
     "render",
 ]
+
+
+MAX_REPEATS = 999
+"""Copies of one program a file may carry, which is a fixture full of them."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +58,9 @@ class PostOptions:
     line_numbers: bool = False
     comments: bool = True
     notes: tuple[str, ...] = ()
+    repeats: int = 1
+    pitch_x: float = 0.0
+    pitch_y: float = 0.0
 
     def __post_init__(self) -> None:
         if not 0 <= self.decimals <= 6:
@@ -55,6 +69,21 @@ class PostOptions:
             raise ValueError(f"a spindle speed of {self.spindle} is not a speed")
         if self.tool < 0:
             raise ValueError(f"a tool number of {self.tool} is not a tool")
+        if self.repeats < 1:
+            raise OutOfRange("repeats", self.repeats, 1, MAX_REPEATS)
+        if self.repeats > MAX_REPEATS:
+            raise OutOfRange("repeats", self.repeats, 1, MAX_REPEATS)
+        if self.repeats > 1 and self.pitch_x == 0.0 and self.pitch_y == 0.0:
+            raise ValueError(f"{self.repeats} repeats with no pitch would cut the same blank")
+
+    def offsets(self) -> tuple[tuple[float, float], ...]:
+        """Where each copy of the program sits, the first one at nothing.
+
+        A fixture is loaded in a line, so the pitch is a step in x, in y, or
+        in both for a fixture loaded on the diagonal. Anything more
+        complicated than a line is a nest, and a nest is not a repeat.
+        """
+        return tuple((index * self.pitch_x, index * self.pitch_y) for index in range(self.repeats))
 
     def coordinate(self, value: float) -> str:
         """One coordinate, at the configured precision.

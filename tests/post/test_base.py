@@ -7,8 +7,10 @@ from typing import Any
 
 import pytest
 
+from dragpoint.errors import OutOfRange
 from dragpoint.path.plan import Toolpath
 from dragpoint.post.base import (
+    MAX_REPEATS,
     POSTS,
     PostDef,
     PostOptions,
@@ -138,3 +140,37 @@ def test_a_post_definition_reads_as_a_line_of_help() -> None:
         render=lambda path, options: "",
     )
     assert str(definition) == "iso (.nc): ISO G code"
+
+
+def test_one_repeat_sits_at_nothing() -> None:
+    assert PostOptions().offsets() == ((0.0, 0.0),)
+
+
+def test_a_fixture_steps_along_in_x() -> None:
+    options = PostOptions(repeats=3, pitch_x=45.0)
+    assert options.offsets() == ((0.0, 0.0), (45.0, 0.0), (90.0, 0.0))
+
+
+def test_a_fixture_can_step_in_y() -> None:
+    options = PostOptions(repeats=2, pitch_y=25.0)
+    assert options.offsets() == ((0.0, 0.0), (0.0, 25.0))
+
+
+def test_a_fixture_can_step_on_the_diagonal() -> None:
+    options = PostOptions(repeats=2, pitch_x=10.0, pitch_y=5.0)
+    assert options.offsets() == ((0.0, 0.0), (10.0, 5.0))
+
+
+def test_no_repeats_at_all_is_refused() -> None:
+    with pytest.raises(OutOfRange, match="repeats"):
+        PostOptions(repeats=0)
+
+
+def test_more_repeats_than_any_fixture_holds_is_refused() -> None:
+    with pytest.raises(OutOfRange, match="repeats"):
+        PostOptions(repeats=MAX_REPEATS + 1, pitch_x=10.0)
+
+
+def test_repeats_with_no_pitch_would_cut_the_same_blank_twice() -> None:
+    with pytest.raises(ValueError, match="same blank"):
+        PostOptions(repeats=4)

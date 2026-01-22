@@ -242,3 +242,26 @@ def test_the_json_reports_the_lines_that_were_actually_set(runner: CliRunner) ->
     )
     payload = json.loads(result.output)
     assert len(payload["lines"]) > 1
+
+
+def test_a_fixture_of_blanks_posts_as_one_subprogram(runner: CliRunner) -> None:
+    result = run(
+        runner, "plate", "post", "--size", "60x20mm", "--repeats", "4", "--pitch", "65mm", "RUN"
+    )
+    assert result.exit_code == 0
+    assert result.output.count("M98") == 4
+    assert result.output.count("O1001") == 1
+
+
+def test_a_fixture_with_no_pitch_is_a_message_and_not_a_traceback(runner: CliRunner) -> None:
+    result = run(runner, "plate", "post", "--size", "60x20mm", "--repeats", "4", "RUN")
+    assert result.exit_code != 0
+    assert "same blank" in result.output
+
+
+def test_the_fixture_can_step_in_y(runner: CliRunner) -> None:
+    result = run(
+        runner, "plate", "post", "--size", "60x20mm", "--repeats", "2", "--pitch-y", "25mm", "RUN"
+    )
+    assert result.exit_code == 0
+    assert "G52 X0.0000 Y25.0000" in result.output

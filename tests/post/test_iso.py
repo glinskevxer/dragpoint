@@ -163,3 +163,61 @@ def test_every_z_the_toolpath_reaches_appears_in_the_program() -> None:
     text = render_iso(path, PostOptions(decimals=3))
     assert f"Z{path.deepest():.3f}" in text
     assert f"Z{path.highest():.3f}" in text
+
+
+def repeated(**overrides: object) -> str:
+    values: dict[str, object] = {"repeats": 3, "pitch_x": 45.0}
+    values.update(overrides)
+    return render_iso(simple_path(), PostOptions(**values))  # type: ignore[arg-type]
+
+
+def test_one_blank_writes_the_moves_where_they_are() -> None:
+    text = render_iso(simple_path(), PostOptions())
+    assert "M98" not in text
+    assert "G52" not in text
+
+
+def test_a_fixture_calls_a_subprogram_once_per_blank() -> None:
+    assert repeated().count("M98 P1001") == 3
+
+
+def test_the_moves_are_written_once_however_many_blanks_there_are() -> None:
+    assert repeated().count("O1001") == 1
+
+
+def test_each_call_is_shifted_onto_its_own_blank() -> None:
+    text = repeated()
+    assert "G52 X45.0000 Y0.0000" in text
+    assert "G52 X90.0000 Y0.0000" in text
+
+
+def test_the_first_blank_needs_no_shift() -> None:
+    lines = repeated().splitlines()
+    assert lines[lines.index("M98 P1001") - 1] == "G52 X0 Y0"
+
+
+def test_the_shift_is_cancelled_before_the_program_ends() -> None:
+    lines = repeated().splitlines()
+    assert lines.index("G52 X0 Y0", lines.index("G52 X90.0000 Y0.0000")) < lines.index("M30")
+
+
+def test_the_subprogram_returns_rather_than_ending_the_program() -> None:
+    assert repeated().rstrip().splitlines()[-2] == "M99"
+
+
+def test_the_file_ends_after_the_subprogram() -> None:
+    assert repeated().rstrip().endswith("%")
+
+
+def test_the_subprogram_number_follows_the_program_number() -> None:
+    assert "O2001" in repeated(number=2000)
+
+
+def test_a_repeated_program_still_stops_the_spindle() -> None:
+    assert "M05" in repeated()
+
+
+def test_line_numbers_run_through_the_subprogram_as_well() -> None:
+    text = repeated(line_numbers=True)
+    assert "N10 " in text
+    assert text.count("N") > 20
