@@ -23,6 +23,7 @@ from dataclasses import dataclass
 
 from dragpoint.compiler.plate import EngravedPlate, compile_plate
 from dragpoint.compiler.settings import MachineSetup
+from dragpoint.rules.batch import JobCheck, run_job_rules
 from dragpoint.rules.check import RuleSelection
 from dragpoint.rules.report import Report, Severity
 from dragpoint.spec.job import JobSpec
@@ -36,6 +37,7 @@ class EngravedJob:
 
     spec: JobSpec
     plates: tuple[EngravedPlate, ...]
+    batch: Report = Report()
 
     @property
     def name(self) -> str:
@@ -44,15 +46,21 @@ class EngravedJob:
 
     @property
     def ok(self) -> bool:
-        """True when no plate reported an error."""
-        return all(plate.ok for plate in self.plates)
+        """True when nothing reported an error, on a plate or on the job."""
+        return all(plate.ok for plate in self.plates) and self.batch.ok
 
     def report(self) -> Report:
-        """Every violation from every plate, plate order kept."""
+        """Every violation from every plate, then the ones about the job.
+
+        The job ones come last because they are read last: an operator works
+        down the plates and then reads what is wrong with the schedule, and
+        a repeated plate name at the top of a page of stroke separations is
+        a repeated plate name nobody sees.
+        """
         merged = Report()
         for plate in self.plates:
             merged = merged.merged(plate.report)
-        return merged
+        return merged.merged(self.batch)
 
     def failed(self) -> tuple[EngravedPlate, ...]:
         """The plates that reported an error, in job order."""
@@ -116,4 +124,8 @@ def compile_job(
         for spec in job.plates
         for piece in spec.pieces()
     )
-    return EngravedJob(spec=job, plates=plates)
+    batch = run_job_rules(
+        JobCheck(job=job, plates=tuple(plate.check() for plate in plates)),
+        selection,
+    )
+    return EngravedJob(spec=job, plates=plates, batch=batch)

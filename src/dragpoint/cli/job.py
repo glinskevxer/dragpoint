@@ -81,8 +81,9 @@ def check(
             {
                 "job": made.name,
                 "pieces": made.piece_count(),
-                "ok": all(plate.ok for plate in plates),
+                "ok": all(plate.ok for plate in plates) and made.batch.ok,
                 "plates": [plate_json(plate) for plate in plates],
+                "job_checks": [violation.message for violation in made.batch.violations],
             }
         )
         context.exit(exit_code_for(report))
@@ -90,6 +91,8 @@ def check(
         if not quiet:
             click.echo(str(plate))
         echo_report(plate.report, quiet=quiet)
+    if only is None:
+        echo_report(made.batch, quiet=quiet)
     if not quiet:
         click.echo(str(made))
     context.exit(exit_code_for(report))
