@@ -19,12 +19,20 @@ A file looks like this::
       s 40,0 300,700 560,0
       s 140,250 460,250
 
+    glyph Aacute 600 U+00C1
+      compose A acute
+
     kern A V -60
 
 Header keys come first, then glyph blocks, then kern lines. Indentation
 inside a glyph block is conventional, not structural: a ``s`` or ``tag`` line
 belongs to the glyph most recently opened however it is indented, which keeps
 the parser out of the whitespace business entirely.
+
+A ``compose`` line stands in for the strokes and names a base and a mark.
+It is resolved once the whole file has been read, so a composed glyph may
+name a base defined further down, and a glyph composed from a composed glyph
+works as long as nothing composes itself in a circle.
 """
 
 from __future__ import annotations
@@ -32,6 +40,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from dragpoint.errors import FontSyntax
+from dragpoint.font.compose import compose_glyph
 from dragpoint.font.face import FaceMetrics, StrokeFace
 from dragpoint.font.glyph import Glyph, is_valid_glyph_name
 from dragpoint.geometry.point import Point
@@ -61,6 +70,7 @@ class _GlyphDraft:
     line: int
     strokes: list[Stroke]
     tags: set[str]
+    compose: tuple[str, str] | None = None
 
 
 def parse_face(text: str, source: str = "<string>") -> StrokeFace:
@@ -101,6 +111,10 @@ def parse_face(text: str, source: str = "<string>") -> StrokeFace:
             if current is None:
                 raise FontSyntax(source, number, "a stroke line with no glyph open")
             current.strokes.append(_parse_stroke(source, number, rest))
+        elif keyword == "compose":
+            if current is None:
+                raise FontSyntax(source, number, "a compose line with no glyph open")
+            current.compose = _parse_compose(source, number, rest)
         elif keyword == "tag":
             if current is None:
                 raise FontSyntax(source, number, "a tag line with no glyph open")
@@ -139,6 +153,8 @@ def _assemble(
     for draft in drafts:
         if draft.name in glyphs:
             raise FontSyntax(source, draft.line, f"glyph {draft.name} appears twice")
+        if draft.compose is not None:
+            continue
         glyphs[draft.name] = Glyph(
             name=draft.name,
             advance=draft.advance,
@@ -146,6 +162,7 @@ def _assemble(
             codepoint=draft.codepoint,
             tags=frozenset(draft.tags),
         )
+    _resolve_composed(source, drafts, glyphs)
 
     kerning: dict[tuple[str, str], int] = {}
     for left, right, value, line in kerns:
@@ -165,6 +182,55 @@ def _assemble(
         )
     except ValueError as exc:
         raise FontSyntax(source, 0, str(exc)) from exc
+
+
+def _parse_compose(source: str, number: int, rest: str) -> tuple[str, str]:
+    """Read a ``compose`` line into the two names it points at."""
+    parts = rest.split()
+    if len(parts) != 2:
+        raise FontSyntax(source, number, "compose takes a base glyph and a mark glyph")
+    return (parts[0], parts[1])
+
+
+def _resolve_composed(source: str, drafts: list[_GlyphDraft], glyphs: dict[str, Glyph]) -> None:
+    """Build every composed glyph, in whatever order they can be built.
+
+    A pass that builds nothing while composed glyphs are still waiting means
+    they are waiting on each other or on something that is not there, and
+    either way the file is wrong and says which glyph it stopped on.
+    """
+    waiting = [draft for draft in drafts if draft.compose is not None]
+    while waiting:
+        made_one = False
+        for draft in list(waiting):
+            base_name, mark_name = draft.compose or ("", "")
+            base = glyphs.get(base_name)
+            mark = glyphs.get(mark_name)
+            if base is None or mark is None:
+                continue
+            if draft.strokes:
+                raise FontSyntax(
+                    source, draft.line, f"{draft.name} has both strokes and a compose line"
+                )
+            glyphs[draft.name] = compose_glyph(
+                draft.name,
+                base,
+                mark,
+                codepoint=draft.codepoint,
+                source=source,
+                line=draft.line,
+            ).with_advance(draft.advance)
+            waiting.remove(draft)
+            made_one = True
+        if not made_one:
+            stuck = waiting[0]
+            base_name, mark_name = stuck.compose or ("", "")
+            raise FontSyntax(
+                source,
+                stuck.line,
+                f"{stuck.name} composes {base_name} and {mark_name}, and one of them "
+                "is not a glyph this file can build",
+            )
 
 
 def _start_glyph(source: str, number: int, rest: str) -> _GlyphDraft:

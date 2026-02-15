@@ -13,6 +13,10 @@ The separation rule is the one that matters. Two strokes in a glyph either
 meet, on purpose, or they stay a clear distance apart. Anything in between
 is a gap the cutter will bridge at some depth and not at others, which is
 the worst kind of fault: it passes the first article and fails the batch.
+
+Bearings are the one rule a glyph can be excused from, and only by having no
+advance at all. That is a combining mark: it is never set on its own, it is
+composed onto a letter, and the letter's bearings are the ones that matter.
 """
 
 from __future__ import annotations
@@ -102,6 +106,8 @@ def _glyph_problems(path: Path, face: StrokeFace, glyph_name: str) -> list[Probl
                 Problem(path, 1, f"{glyph_name}: a stroke is only {stroke.length():.1f} units")
             )
 
+    if glyph.advance == 0:
+        return problems
     if box.min_x < MIN_BEARING - 0.5:
         problems.append(Problem(path, 1, f"{glyph_name}: left bearing is {box.min_x:.1f} units"))
     right = glyph.advance - box.max_x

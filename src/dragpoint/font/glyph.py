@@ -57,6 +57,35 @@ _NAMED_CHARACTERS = {
     "~": "asciitilde",
 }
 
+_ACCENTED_CHARACTERS = {
+    "À": "Agrave",
+    "Á": "Aacute",
+    "Â": "Acircumflex",
+    "Ä": "Adieresis",
+    "È": "Egrave",
+    "É": "Eacute",
+    "Ê": "Ecircumflex",
+    "Ë": "Edieresis",
+    "Ì": "Igrave",
+    "Í": "Iacute",
+    "Ï": "Idieresis",
+    "Ñ": "Ntilde",
+    "Ò": "Ograve",
+    "Ó": "Oacute",
+    "Ô": "Ocircumflex",
+    "Ö": "Odieresis",
+    "Ù": "Ugrave",
+    "Ú": "Uacute",
+    "Û": "Ucircumflex",
+    "Ü": "Udieresis",
+}
+"""The accented capitals, under the names a type designer would use.
+
+Held apart from the punctuation table because they are a different kind of
+thing: every one of these is composed rather than drawn, and a face that
+does not compose them will not have them under any name.
+"""
+
 _DIGIT_NAMES = (
     "zero",
     "one",
@@ -84,7 +113,7 @@ def glyph_name_for(character: str) -> str:
         return character
     if character.isdigit() and character.isascii():
         return _DIGIT_NAMES[int(character)]
-    named = _NAMED_CHARACTERS.get(character)
+    named = _NAMED_CHARACTERS.get(character) or _ACCENTED_CHARACTERS.get(character)
     if named is not None:
         return named
     return f"uni{ord(character):04X}"
@@ -103,6 +132,11 @@ class Glyph:
     the marks. A space has an advance and no strokes at all, and a swash
     would have marks wider than its advance. Keeping the two apart is what
     lets side bearings be negative without anything downstream noticing.
+
+    ``composed_from`` is a note of where a composed glyph came from, and
+    nothing reads it except the writer. The strokes are already in the
+    glyph, so everything downstream sees an accented capital exactly as it
+    would see a drawn one, which is the point of composing at load time.
     """
 
     name: str
@@ -110,6 +144,7 @@ class Glyph:
     strokes: tuple[Stroke, ...] = ()
     codepoint: int | None = None
     tags: frozenset[str] = field(default_factory=frozenset)
+    composed_from: tuple[str, str] | None = None
 
     def __post_init__(self) -> None:
         if not is_valid_glyph_name(self.name):
@@ -163,6 +198,7 @@ class Glyph:
             strokes=tuple(stroke.transformed(transform) for stroke in self.strokes),
             codepoint=self.codepoint,
             tags=self.tags,
+            composed_from=self.composed_from,
         )
 
     def with_advance(self, advance: int) -> Glyph:
@@ -173,6 +209,7 @@ class Glyph:
             strokes=self.strokes,
             codepoint=self.codepoint,
             tags=self.tags,
+            composed_from=self.composed_from,
         )
 
     def has_tag(self, tag: str) -> bool:

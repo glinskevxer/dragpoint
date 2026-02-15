@@ -161,3 +161,31 @@ def test_a_plate_can_ask_for_the_dial_face() -> None:
     )
     assert made.ok, str(made.report)
     assert made.face.name == "dialface"
+
+
+def test_the_house_face_draws_the_accented_capitals_export_work_needs() -> None:
+    face = shipped_face("panelgothic")
+    accented = "".join(chr(code) for code in (0xC9, 0xC8, 0xCA, 0xCB, 0xD1, 0xDC, 0xD6, 0xC0))
+    assert face.missing(accented) == ()
+
+
+def test_an_accented_capital_is_the_letter_plus_a_mark() -> None:
+    face = shipped_face("panelgothic")
+    assert face.glyph("Eacute").stroke_count() == face.glyph("E").stroke_count() + 1
+
+
+def test_an_accented_capital_is_no_wider_than_the_letter() -> None:
+    face = shipped_face("panelgothic")
+    assert face.glyph("Eacute").advance == face.glyph("E").advance
+
+
+def test_the_mark_sits_above_the_capital_line() -> None:
+    face = shipped_face("panelgothic")
+    box = face.glyph("Eacute").ink_bounds()
+    assert box is not None
+    assert box.max_y > face.metrics.cap_height
+
+
+def test_the_marks_themselves_take_up_no_room_on_the_line() -> None:
+    face = shipped_face("panelgothic")
+    assert face.glyph("acutecomb").advance == 0

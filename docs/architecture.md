@@ -31,7 +31,7 @@ import that would break it fails the build rather than the review.
 ## What is in each layer
 
 - **`dragpoint.geometry`** `arc`, `box`, `nearness`, `point`, `stroke`, `transform`
-- **`dragpoint.font`** `face`, `glyph`, `library`, `parse`, `write`
+- **`dragpoint.font`** `compose`, `face`, `glyph`, `library`, `parse`, `write`
 - **`dragpoint.text`** `fit`, `layout`, `sequence`, `shape`, `style`, `wrap`
 - **`dragpoint.tool`** `cutter`, `material`, `passes`
 - **`dragpoint.spec`** `feature`, `job`, `load`, `plate`, `sheetload`

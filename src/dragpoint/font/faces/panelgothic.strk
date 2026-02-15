@@ -377,6 +377,94 @@ glyph y 480 U+0079
 glyph z 470 U+007A
   s 115,500 390,500 115,0 390,0
 
+# Accent marks. These are not letters and have no advance: they exist to be
+# composed onto a capital, and a legend that asks for one on its own gets a
+# mark hanging in the air above the line, which is what it asked for.
+#
+# They are drawn where a mark over a flat topped capital would sit. Where
+# they actually end up is worked out when they are composed, from the ink
+# of the letter underneath, so moving one of these moves every accent that
+# uses it and nothing else.
+
+glyph acutecomb 0
+  s 180,770 330,910
+
+glyph gravecomb 0
+  s 180,910 330,770
+
+glyph circumflexcomb 0
+  s 165,780 255,910 345,780
+
+glyph dieresiscomb 0
+  s 175,900 175,800
+  s 335,900 335,800
+
+glyph tildecomb 0
+  s 160,800 215,870 285,810 340,880
+
+# Accented capitals, for the export work. Each one is a base and a mark and
+# nothing else, so the letters stay in step with the unaccented face.
+
+glyph Aacute 700 U+00C1
+  compose A acutecomb
+
+glyph Agrave 700 U+00C0
+  compose A gravecomb
+
+glyph Acircumflex 700 U+00C2
+  compose A circumflexcomb
+
+glyph Adieresis 700 U+00C4
+  compose A dieresiscomb
+
+glyph Eacute 560 U+00C9
+  compose E acutecomb
+
+glyph Egrave 560 U+00C8
+  compose E gravecomb
+
+glyph Ecircumflex 560 U+00CA
+  compose E circumflexcomb
+
+glyph Edieresis 560 U+00CB
+  compose E dieresiscomb
+
+glyph Iacute 260 U+00CD
+  compose I acutecomb
+
+glyph Igrave 260 U+00CC
+  compose I gravecomb
+
+glyph Idieresis 260 U+00CF
+  compose I dieresiscomb
+
+glyph Ntilde 660 U+00D1
+  compose N tildecomb
+
+glyph Oacute 680 U+00D3
+  compose O acutecomb
+
+glyph Ograve 680 U+00D2
+  compose O gravecomb
+
+glyph Ocircumflex 680 U+00D4
+  compose O circumflexcomb
+
+glyph Odieresis 680 U+00D6
+  compose O dieresiscomb
+
+glyph Uacute 650 U+00DA
+  compose U acutecomb
+
+glyph Ugrave 650 U+00D9
+  compose U gravecomb
+
+glyph Ucircumflex 650 U+00DB
+  compose U circumflexcomb
+
+glyph Udieresis 650 U+00DC
+  compose U dieresiscomb
+
 kern A T -30
 kern A V -30
 kern A W -30

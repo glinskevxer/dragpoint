@@ -6,6 +6,7 @@ import pytest
 
 from dragpoint.font.face import FaceMetrics, StrokeFace
 from dragpoint.font.glyph import Glyph
+from dragpoint.font.library import shipped_face
 from dragpoint.font.parse import parse_face
 from dragpoint.font.write import format_number, write_face
 from dragpoint.geometry.stroke import Stroke
@@ -147,3 +148,42 @@ def test_the_header_comes_out_in_a_fixed_order() -> None:
         "linegap",
         "fallback",
     ]
+
+
+def test_a_composed_glyph_goes_out_as_a_compose_line() -> None:
+    face = shipped_face("panelgothic")
+    text = write_face(face)
+    assert "  compose E acutecomb" in text
+
+
+def test_a_composed_glyph_does_not_go_out_as_strokes() -> None:
+    face = shipped_face("panelgothic")
+    block = _block_for(write_face(face), "Eacute")
+    assert not [line for line in block if line.strip().startswith("s ")]
+
+
+def test_the_composed_tag_is_not_written_because_the_line_says_it() -> None:
+    block = _block_for(write_face(shipped_face("panelgothic")), "Eacute")
+    assert "  tag composed" not in block
+
+
+def test_a_face_with_composed_glyphs_round_trips() -> None:
+    face = shipped_face("panelgothic")
+    again = parse_face(write_face(face))
+    assert again.glyph("Eacute") == face.glyph("Eacute")
+
+
+def test_writing_twice_gives_the_same_bytes_with_composed_glyphs_in() -> None:
+    face = shipped_face("panelgothic")
+    once = write_face(face)
+    assert write_face(parse_face(once)) == once
+
+
+def _block_for(text: str, name: str) -> list[str]:
+    """The lines of one glyph block, the header included."""
+    lines = text.splitlines()
+    start = lines.index(next(line for line in lines if line.startswith(f"glyph {name} ")))
+    end = start + 1
+    while end < len(lines) and lines[end].startswith("  "):
+        end += 1
+    return lines[start:end]

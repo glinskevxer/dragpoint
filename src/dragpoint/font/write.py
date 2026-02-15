@@ -7,6 +7,11 @@ face and not a diff of whatever order a dictionary happened to be in.
 
 Glyphs come out ordered by code point, with the unencoded ones after them by
 name. A font file that lists A next to B is one a person can read.
+
+A composed glyph goes back out as the compose line it came in as. Writing
+its strokes instead would round trip perfectly well and would quietly turn
+an accented capital into a drawn one, so the next time somebody moved the E
+the E acute would stay where it was.
 """
 
 from __future__ import annotations
@@ -52,7 +57,11 @@ def _write_glyph(glyph: Glyph) -> list[str]:
     if glyph.codepoint is not None:
         header += f" U+{glyph.codepoint:04X}"
     lines = [header]
-    lines.extend(f"  tag {tag}" for tag in sorted(glyph.tags))
+    lines.extend(f"  tag {tag}" for tag in sorted(glyph.tags) if tag != "composed")
+    if glyph.composed_from is not None:
+        base, mark = glyph.composed_from
+        lines.append(f"  compose {base} {mark}")
+        return lines
     for stroke in glyph.strokes:
         points = " ".join(
             f"{format_number(point.x)},{format_number(point.y)}" for point in stroke.points

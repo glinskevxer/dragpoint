@@ -207,3 +207,73 @@ def test_a_bad_metrics_block_is_reported_against_the_file() -> None:
 def test_a_fallback_that_is_not_a_glyph_is_reported() -> None:
     with pytest.raises(FontSyntax, match="fallback glyph"):
         parse_face(GOOD.replace("fallback question", "fallback nothere"))
+
+
+COMPOSED = """
+face testface
+upem 1000
+cap 700
+xheight 500
+ascender 750
+descender -200
+
+glyph Aacute 600 U+00C1
+  compose A acutecomb
+
+glyph A 600 U+0041
+  s 40,0 300,700 560,0
+  s 140,250 460,250
+
+glyph acutecomb 0
+  s 180,770 330,910
+"""
+
+
+def test_a_composed_glyph_is_built_from_its_parts() -> None:
+    face = parse_face(COMPOSED)
+    assert face.glyph("Aacute").stroke_count() == 3
+
+
+def test_a_composed_glyph_may_name_a_base_defined_later() -> None:
+    assert "Aacute" in parse_face(COMPOSED).names()
+
+
+def test_a_composed_glyph_keeps_its_own_advance_and_code_point() -> None:
+    glyph = parse_face(COMPOSED).glyph("Aacute")
+    assert glyph.advance == 600
+    assert glyph.codepoint == 0xC1
+
+
+def test_a_composed_glyph_remembers_what_it_was_made_from() -> None:
+    assert parse_face(COMPOSED).glyph("Aacute").composed_from == ("A", "acutecomb")
+
+
+def test_a_glyph_composed_from_a_composed_glyph_works() -> None:
+    text = COMPOSED + "\nglyph Adouble 600\n  compose Aacute acutecomb\n"
+    assert parse_face(text).glyph("Adouble").stroke_count() == 4
+
+
+def test_a_compose_line_with_one_name_is_refused() -> None:
+    with pytest.raises(FontSyntax, match="a base glyph and a mark"):
+        parse_face(COMPOSED.replace("compose A acutecomb", "compose A"))
+
+
+def test_a_compose_line_outside_a_glyph_is_refused() -> None:
+    with pytest.raises(FontSyntax, match="no glyph open"):
+        parse_face(COMPOSED.replace("glyph Aacute 600 U+00C1\n", ""))
+
+
+def test_composing_something_that_is_not_there_names_the_glyph() -> None:
+    with pytest.raises(FontSyntax, match="Aacute composes A and nosuchmark"):
+        parse_face(COMPOSED.replace("compose A acutecomb", "compose A nosuchmark"))
+
+
+def test_a_glyph_that_composes_itself_is_refused() -> None:
+    with pytest.raises(FontSyntax, match="composes"):
+        parse_face(COMPOSED.replace("compose A acutecomb", "compose Aacute acutecomb"))
+
+
+def test_a_glyph_with_strokes_and_a_compose_line_is_refused() -> None:
+    text = COMPOSED.replace("  compose A acutecomb", "  compose A acutecomb\n  s 0,0 10,10")
+    with pytest.raises(FontSyntax, match="both strokes and a compose line"):
+        parse_face(text)
