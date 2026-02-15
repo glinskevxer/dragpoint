@@ -79,6 +79,18 @@ Show one face and what it covers.
 | --- | --- | --- |
 | `--json` | Print the metrics as JSON. |  |
 
+### `dragpoint font specimen NAME`
+
+Draw every glyph in a face at the size it gets cut.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--out` |  |  |
+| `--cap-height` | Lettering height. | `8mm` |
+| `--groove` | Width of the mark. | `0.5mm` |
+| `--columns` | Glyphs across the sheet. | `8` |
+| `--no-grid` | Leave the cell boxes off. |  |
+
 ## `dragpoint job`
 
 Work on a whole job.

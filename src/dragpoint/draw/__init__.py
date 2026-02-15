@@ -7,6 +7,7 @@ machine is switched on.
 
 from dragpoint.draw.dxf import render_dxf
 from dragpoint.draw.sheet import render_nest
+from dragpoint.draw.specimen import render_specimen
 from dragpoint.draw.svg import render_svg
 
-__all__ = ["render_dxf", "render_nest", "render_svg"]
+__all__ = ["render_dxf", "render_nest", "render_specimen", "render_svg"]

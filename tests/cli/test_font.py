@@ -124,3 +124,37 @@ def test_a_dump_can_go_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert target.is_file()
     assert parse_face(target.read_text(encoding="utf-8")).name == "panelgothic"
+
+
+def test_specimen_draws_the_face(runner: CliRunner) -> None:
+    result = run(runner, "font", "specimen", "dialface")
+    assert result.exit_code == 0
+    assert result.output.startswith("<svg")
+    assert "dialface" in result.output
+
+
+def test_specimen_writes_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "sheet.svg"
+    result = run(runner, "font", "specimen", "panelgothic", "--out", str(target))
+    assert result.exit_code == 0
+    assert target.read_text(encoding="utf-8").startswith("<svg")
+
+
+def test_specimen_takes_the_lettering_height_and_the_groove(runner: CliRunner) -> None:
+    result = run(
+        runner, "font", "specimen", "dialface", "--cap-height", "12mm", "--groove", "0.8mm"
+    )
+    assert result.exit_code == 0
+    assert 'stroke-width="0.8000"' in result.output
+
+
+def test_specimen_for_a_face_nobody_has_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "font", "specimen", "nosuchface")
+    assert result.exit_code != 0
+    assert "no face called" in result.output
+
+
+def test_specimen_can_leave_the_boxes_off(runner: CliRunner) -> None:
+    result = run(runner, "font", "specimen", "dialface", "--no-grid")
+    assert result.exit_code == 0
+    assert "<rect" not in result.output

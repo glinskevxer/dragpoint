@@ -12,6 +12,7 @@ from pathlib import Path
 import click
 
 from dragpoint.cli.common import echo_json, handled, write_out
+from dragpoint.draw.specimen import render_specimen
 from dragpoint.font.library import load_face, shipped_names
 from dragpoint.font.write import write_face
 from dragpoint.text.fit import FitPolicy, fit_lines, measure_lines
@@ -115,6 +116,29 @@ def measure(
             return
         result = fit_lines(list(text), face, style, parse_length(limit), FitPolicy(fit))
         click.echo(str(result))
+
+
+@font.command("specimen")
+@click.argument("name")
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.option("--cap-height", default="8mm", show_default=True, help="Lettering height.")
+@click.option("--groove", default="0.5mm", show_default=True, help="Width of the mark.")
+@click.option("--columns", default=8, show_default=True, help="Glyphs across the sheet.")
+@click.option("--no-grid", is_flag=True, help="Leave the cell boxes off.")
+def specimen(
+    name: str, out: Path | None, cap_height: str, groove: str, columns: int, no_grid: bool
+) -> None:
+    """Draw every glyph in a face at the size it gets cut."""
+    with handled():
+        face = load_face(name)
+        text = render_specimen(
+            face,
+            cap_height=parse_length(cap_height),
+            groove=parse_length(groove),
+            columns=columns,
+            show_grid=not no_grid,
+        )
+    write_out(text, out)
 
 
 @font.command("dump")
