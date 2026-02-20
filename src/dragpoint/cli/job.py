@@ -190,6 +190,8 @@ def summary(schedule: Path) -> None:
     click.echo(f"  cutters {', '.join(spec.cutter_codes())}")
     for stock, count in made.stock_usage().items():
         click.echo(f"  {stock:<10} {count} pieces")
+    for life in made.tip_lives():
+        click.echo(f"  {life}")
     failed = made.failed()
     if failed:
         click.echo(f"  not ok: {', '.join(plate.name for plate in failed)}")

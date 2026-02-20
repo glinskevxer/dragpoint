@@ -101,6 +101,23 @@ def _drilling(job: EngravedJob) -> list[str]:
     return lines
 
 
+def _tips(job: EngravedJob) -> list[str]:
+    """What the job asks of each cutter, and whether one tip covers it.
+
+    Only the cutters that want more than one tip get a line of their own.
+    A setup sheet that says every cutter is fine is a setup sheet with four
+    lines on it that nobody reads, and then the fifth one is missed.
+    """
+    lives = job.tip_lives()
+    hungry = [life for life in lives if not life.within_one_tip]
+    if not hungry:
+        return []
+    lines = ["", "tips"]
+    for life in hungry:
+        lines.append(f"  {life}")
+    return lines
+
+
 def _violations(job: EngravedJob) -> list[str]:
     """What the rules said, worst first, or a line saying they said nothing."""
     report = job.report().sorted_worst_first()
@@ -146,6 +163,7 @@ def setup_sheet(
             for name, count in nest.left_over:
                 lines.append(f"          {count} of {name} did not fit")
 
+    lines.extend(_tips(job))
     lines.extend(_drilling(job))
     lines.extend(_violations(job))
     lines.append("")

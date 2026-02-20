@@ -35,6 +35,12 @@ class Cutter:
 
     ``max_depth`` is what the flute length and the cone geometry allow, not
     what the material allows. Material limits live with the material.
+
+    ``life`` is metres of groove the tip is rated for in two ply laminate.
+    It is the supplier's figure and it is optimistic, the way every tool
+    life figure has always been, so it is a planning number rather than a
+    promise. What it is good for is telling a job of four hundred plates
+    that it will not go through on one cutter.
     """
 
     name: str
@@ -43,6 +49,7 @@ class Cutter:
     shank: float = 3.175
     flutes: int = 1
     max_depth: float = 1.5
+    life: float = 400.0
 
     def __post_init__(self) -> None:
         if self.tip_width <= 0.0:
@@ -55,6 +62,8 @@ class Cutter:
             raise OutOfRange("flutes", self.flutes, 1, 4)
         if self.max_depth <= 0.0:
             raise OutOfRange("max depth", self.max_depth, QUANTUM, math.inf)
+        if self.life <= 0.0:
+            raise OutOfRange("life", self.life, QUANTUM, math.inf)
 
     @property
     def is_parallel(self) -> bool:
@@ -107,16 +116,37 @@ class Cutter:
 CATALOGUE: dict[str, Cutter] = {
     cutter.name: cutter
     for cutter in (
-        Cutter(name="V10-005", tip_width=0.127, included_angle=10.0, max_depth=1.0),
-        Cutter(name="V20-010", tip_width=0.254, included_angle=20.0, max_depth=1.2),
-        Cutter(name="V30-010", tip_width=0.254, included_angle=30.0, max_depth=1.5),
-        Cutter(name="V30-015", tip_width=0.381, included_angle=30.0, max_depth=1.5),
-        Cutter(name="V45-015", tip_width=0.381, included_angle=45.0, max_depth=1.5),
-        Cutter(name="V60-020", tip_width=0.508, included_angle=60.0, max_depth=1.5),
-        Cutter(name="V90-030", tip_width=0.762, included_angle=90.0, max_depth=1.0),
-        Cutter(name="P-010", tip_width=0.254, included_angle=0.0, max_depth=2.0, flutes=2),
-        Cutter(name="P-020", tip_width=0.508, included_angle=0.0, max_depth=3.0, flutes=2),
-        Cutter(name="P-030", tip_width=0.794, included_angle=0.0, max_depth=4.0, flutes=2),
+        Cutter(name="V10-005", tip_width=0.127, included_angle=10.0, max_depth=1.0, life=180.0),
+        Cutter(name="V20-010", tip_width=0.254, included_angle=20.0, max_depth=1.2, life=300.0),
+        Cutter(name="V30-010", tip_width=0.254, included_angle=30.0, max_depth=1.5, life=350.0),
+        Cutter(name="V30-015", tip_width=0.381, included_angle=30.0, max_depth=1.5, life=500.0),
+        Cutter(name="V45-015", tip_width=0.381, included_angle=45.0, max_depth=1.5, life=550.0),
+        Cutter(name="V60-020", tip_width=0.508, included_angle=60.0, max_depth=1.5, life=700.0),
+        Cutter(name="V90-030", tip_width=0.762, included_angle=90.0, max_depth=1.0, life=900.0),
+        Cutter(
+            name="P-010",
+            tip_width=0.254,
+            included_angle=0.0,
+            max_depth=2.0,
+            flutes=2,
+            life=120.0,
+        ),
+        Cutter(
+            name="P-020",
+            tip_width=0.508,
+            included_angle=0.0,
+            max_depth=3.0,
+            flutes=2,
+            life=200.0,
+        ),
+        Cutter(
+            name="P-030",
+            tip_width=0.794,
+            included_angle=0.0,
+            max_depth=4.0,
+            flutes=2,
+            life=260.0,
+        ),
     )
 }
 """The cutters the crib actually holds. Names are the ones on the tube."""

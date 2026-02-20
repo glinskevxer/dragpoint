@@ -245,3 +245,35 @@ def test_a_run_of_identical_plates_is_still_compiled_once() -> None:
     )
     assert len(made) == 1
     assert made.piece_count() == 5
+
+
+def test_a_job_says_what_it_asks_of_each_cutter() -> None:
+    made = compile_job(small_job())
+    lives = made.tip_lives()
+    assert [life.cutter for life in lives] == ["V30-015"]
+    assert lives[0].cutting > 0.0
+
+
+def test_the_tip_reckoning_counts_the_quantities() -> None:
+    one = compile_job(JobSpec(name="J", plates=(plate_spec(name="P-1", lines=("ONE",)),)))
+    many = compile_job(
+        JobSpec(name="J", plates=(plate_spec(name="P-1", lines=("ONE",), quantity=10),))
+    )
+    assert many.tip_lives()[0].cutting == pytest.approx(10.0 * one.tip_lives()[0].cutting)
+
+
+def test_two_cutters_get_a_line_each() -> None:
+    made = compile_job(
+        JobSpec(
+            name="J",
+            plates=(
+                plate_spec(name="P-1", lines=("ONE",)),
+                plate_spec(name="P-2", lines=("TWO",), cutter="V20-010"),
+            ),
+        )
+    )
+    assert [life.cutter for life in made.tip_lives()] == ["V20-010", "V30-015"]
+
+
+def test_a_job_of_nothing_asks_nothing_of_any_cutter() -> None:
+    assert compile_job(JobSpec(name="empty")).tip_lives() == ()

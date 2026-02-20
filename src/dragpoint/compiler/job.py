@@ -27,6 +27,9 @@ from dragpoint.rules.batch import JobCheck, run_job_rules
 from dragpoint.rules.check import RuleSelection
 from dragpoint.rules.report import Report, Severity
 from dragpoint.spec.job import JobSpec
+from dragpoint.tool.cutter import Cutter
+from dragpoint.tool.life import TipLife, job_tip_life
+from dragpoint.tool.material import Material
 
 __all__ = ["EngravedJob", "compile_job"]
 
@@ -92,6 +95,22 @@ class EngravedJob:
         for plate in self.plates:
             tally[plate.spec.stock] = tally.get(plate.spec.stock, 0) + plate.spec.quantity
         return dict(sorted(tally.items()))
+
+    def tip_lives(self) -> tuple[TipLife, ...]:
+        """What the job asks of each cutter it uses, sorted by cutter.
+
+        Cutting length is counted per piece and multiplied by the quantity,
+        because a tip does not know that six plates were the same drawing.
+        """
+        gathered: dict[str, dict[str, tuple[Material, float]]] = {}
+        cutters: dict[str, Cutter] = {}
+        for plate in self.plates:
+            cutters[plate.cutter.name] = plate.cutter
+            metres = plate.cuts.cut_length() * plate.spec.quantity / 1000.0
+            by_stock = gathered.setdefault(plate.cutter.name, {})
+            stock, so_far = by_stock.get(plate.stock.name, (plate.stock, 0.0))
+            by_stock[plate.stock.name] = (stock, so_far + metres)
+        return tuple(job_tip_life(cutters[name], gathered[name]) for name in sorted(gathered))
 
     def worst(self) -> Severity | None:
         """The worst severity anywhere in the job."""
