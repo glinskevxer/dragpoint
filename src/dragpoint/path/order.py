@@ -12,6 +12,16 @@ gets most of the rest. Neither is optimal and neither needs to be. The
 saving that matters is the first one, from an ordering nobody chose to an
 ordering somebody did.
 
+The twist pays for itself twice. When a cut may be entered from either end,
+turning a run of cuts round leaves every move inside that run exactly as
+long as it was: the run is walked backwards and each cut in it is walked
+backwards, so the same two ends are still joined. Only the two moves at the
+ends of the run change, and the worth of a two opt move is four distances
+rather than a walk of the whole plate. With reversing turned off that no
+longer holds, the moves inside the run really do change, and the whole
+sequence has to be measured. Both are here and the fast one is used where
+it is true.
+
 Passes are never mixed. Reordering across a pass boundary would have the
 machine cutting at two depths in one sweep, which is not what the pass plan
 asked for and would need a Z move between every cut instead of between
@@ -29,6 +39,13 @@ __all__ = ["OrderResult", "order_cuts", "travel_of"]
 
 ORIGIN = Point(0.0, 0.0)
 """Where the head is taken to be before the first cut."""
+
+TOLERANCE = 1e-9
+"""Millimetres a move has to save before it counts as an improvement.
+
+Without it a sweep can take a move worth a rounding error, put it back on
+the next sweep, and go round until it runs out of rounds.
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,6 +158,25 @@ def _sequence_cost(group: list[Cut], start: Point) -> float:
     return total
 
 
+def _flip_delta(group: list[Cut], first: int, last: int, start: Point) -> float:
+    """What turning the span from ``first`` to ``last`` round would save.
+
+    Negative is an improvement. Only the move into the span and the move out
+    of it change, because every cut in the span is entered from its other
+    end, so this is four distances however long the span is.
+    """
+    before = start if first == 0 else group[first - 1].end
+    entry = group[first].start
+    exit_point = group[last].end
+    was = before.distance_to(entry)
+    now = before.distance_to(exit_point)
+    if last + 1 < len(group):
+        after = group[last + 1].start
+        was += exit_point.distance_to(after)
+        now += entry.distance_to(after)
+    return now - was
+
+
 def _two_opt(group: list[Cut], start: Point, allow_reverse: bool, rounds: int) -> list[Cut]:
     """Reverse sub sequences while that shortens the travel.
 
@@ -152,19 +188,43 @@ def _two_opt(group: list[Cut], start: Point, allow_reverse: bool, rounds: int) -
     if rounds <= 0 or len(group) < 3:
         return group
     best = list(group)
-    best_cost = _sequence_cost(best, start)
     for _ in range(rounds):
-        improved = False
-        for first in range(len(best) - 1):
-            for last in range(first + 1, len(best)):
-                candidate = _reversed_span(best, first, last, allow_reverse)
-                cost = _sequence_cost(candidate, start)
-                if cost < best_cost - 1e-9:
-                    best, best_cost = candidate, cost
-                    improved = True
-        if not improved:
+        if not _one_round(best, start, allow_reverse):
             break
     return best
+
+
+def _one_round(best: list[Cut], start: Point, allow_reverse: bool) -> bool:
+    """One sweep of every span, taking every improvement it finds.
+
+    The list is changed in place, which is what makes the sweep worth
+    anything: a later span is measured against the shorter path the earlier
+    ones already found rather than against the one the sweep started with.
+    """
+    improved = False
+    for first in range(len(best) - 1):
+        for last in range(first + 1, len(best)):
+            if not _worth_it(best, first, last, start, allow_reverse):
+                continue
+            best[first : last + 1] = _turned(best[first : last + 1], allow_reverse)
+            improved = True
+    return improved
+
+
+def _worth_it(group: list[Cut], first: int, last: int, start: Point, allow_reverse: bool) -> bool:
+    """True when turning this span round makes the travel shorter."""
+    if allow_reverse:
+        return _flip_delta(group, first, last, start) < -TOLERANCE
+    candidate = _reversed_span(group, first, last, False)
+    return _sequence_cost(candidate, start) < _sequence_cost(group, start) - TOLERANCE
+
+
+def _turned(span: list[Cut], allow_reverse: bool) -> list[Cut]:
+    """One span, walked the other way, each cut turned round with it."""
+    turned = span[::-1]
+    if allow_reverse:
+        return [cut.reversed() for cut in turned]
+    return turned
 
 
 def _reversed_span(group: list[Cut], first: int, last: int, allow_reverse: bool) -> list[Cut]:
