@@ -106,3 +106,39 @@ def test_moved() -> None:
 
 def test_str_is_readable_in_a_failure_message() -> None:
     assert str(Box(0.0, 0.0, 1.5, 2.0)) == "[0.000,0.000 1.500,2.000]"
+
+
+def test_two_boxes_that_overlap_have_no_gap() -> None:
+    assert Box(0.0, 0.0, 10.0, 10.0).gap_to(Box(5.0, 5.0, 15.0, 15.0)) == 0.0
+
+
+def test_a_box_inside_another_has_no_gap() -> None:
+    assert Box(0.0, 0.0, 10.0, 10.0).gap_to(Box(2.0, 2.0, 3.0, 3.0)) == 0.0
+
+
+def test_two_boxes_that_touch_along_an_edge_have_no_gap() -> None:
+    assert Box(0.0, 0.0, 10.0, 10.0).gap_to(Box(10.0, 0.0, 20.0, 10.0)) == 0.0
+
+
+def test_boxes_side_by_side_are_the_gap_between_their_edges() -> None:
+    assert Box(0.0, 0.0, 10.0, 10.0).gap_to(Box(14.0, 2.0, 20.0, 8.0)) == pytest.approx(4.0)
+
+
+def test_boxes_one_above_the_other_measure_the_same_way() -> None:
+    assert Box(0.0, 0.0, 10.0, 10.0).gap_to(Box(2.0, 13.0, 8.0, 20.0)) == pytest.approx(3.0)
+
+
+def test_boxes_on_the_diagonal_measure_corner_to_corner() -> None:
+    assert Box(0.0, 0.0, 10.0, 10.0).gap_to(Box(13.0, 14.0, 20.0, 20.0)) == pytest.approx(5.0)
+
+
+def test_the_gap_is_the_same_measured_either_way_round() -> None:
+    left = Box(0.0, 0.0, 10.0, 10.0)
+    right = Box(13.0, 14.0, 20.0, 20.0)
+    assert left.gap_to(right) == right.gap_to(left)
+
+
+def test_the_gap_is_never_more_than_the_distance_between_two_points_inside() -> None:
+    left = Box(0.0, 0.0, 10.0, 10.0)
+    right = Box(20.0, 20.0, 30.0, 30.0)
+    assert left.gap_to(right) <= Point(10.0, 10.0).distance_to(Point(20.0, 20.0)) + 1e-9

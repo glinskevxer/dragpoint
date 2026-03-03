@@ -262,3 +262,41 @@ def test_the_fold_ratio_catches_a_closed_counter() -> None:
 def test_the_fold_ratio_catches_a_sharp_spike() -> None:
     spike = Stroke.from_pairs([(0.0, 0.0), (10.0, 1.0), (0.0, 2.0)])
     assert self_approach(spike, min_arc=1.0, fold_ratio=1.5) < 2.0
+
+
+def grid_of_strokes(across: int, up: int, pitch: float = 10.0) -> list[Stroke]:
+    """A field of short strokes, none of them near each other."""
+    return [
+        Stroke.from_pairs([(x * pitch, y * pitch), (x * pitch + 2.0, y * pitch)])
+        for x in range(across)
+        for y in range(up)
+    ]
+
+
+def test_a_field_of_strokes_measures_the_pitch_between_rows() -> None:
+    field = grid_of_strokes(6, 6)
+    assert closest_approach(field) == pytest.approx(8.0)
+
+
+def test_one_close_pair_in_a_field_is_still_found() -> None:
+    field = grid_of_strokes(6, 6)
+    field.append(Stroke.from_pairs([(0.0, 0.3), (2.0, 0.3)]))
+    assert closest_approach(field) == pytest.approx(0.3)
+
+
+def test_the_answer_does_not_change_with_the_order_the_strokes_come_in() -> None:
+    field = grid_of_strokes(5, 5)
+    field.append(Stroke.from_pairs([(0.0, 0.4), (2.0, 0.4)]))
+    assert closest_approach(field) == pytest.approx(closest_approach(list(reversed(field))))
+
+
+def test_two_long_strokes_far_apart_still_measure_exactly() -> None:
+    left = Stroke.from_pairs([(0.0, 0.0), (100.0, 0.0)])
+    right = Stroke.from_pairs([(0.0, 7.5), (100.0, 7.5)])
+    assert stroke_to_stroke(left, right) == pytest.approx(7.5)
+
+
+def test_a_stroke_that_doubles_back_near_another_is_measured_at_its_nearest() -> None:
+    left = Stroke.from_pairs([(0.0, 0.0), (50.0, 0.0), (50.0, 20.0), (0.0, 20.0)])
+    right = Stroke.from_pairs([(0.0, 22.0), (50.0, 22.0)])
+    assert stroke_to_stroke(left, right) == pytest.approx(2.0)

@@ -8,6 +8,13 @@ happened is a segment to segment distance problem and nothing more exotic.
 Everything here is exact. There is no sampling, because a sampled minimum
 distance misses exactly the case that matters, which is two strokes that touch
 at one point and are far apart everywhere else.
+
+Exact does not mean measuring everything. A glyph is a few dozen strokes and
+a plate is a few hundred, which is tens of thousands of segment pairs, and
+almost all of them are nowhere near each other. Every pair is offered a box
+first: two boxes further apart than the closest thing found so far cannot
+contain anything closer, so the segments inside them are never touched. The
+answer is the same one and there is a great deal less of it.
 """
 
 from __future__ import annotations
@@ -15,6 +22,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable
 
+from dragpoint.geometry.box import Box
 from dragpoint.geometry.point import Point
 from dragpoint.geometry.stroke import Stroke
 from dragpoint.units import QUANTUM
@@ -89,9 +97,12 @@ def stroke_to_stroke(left: Stroke, right: Stroke, *, cutoff: float | None = None
     :func:`closest_approach`, which throws the pair away.
     """
     best = float("inf")
-    left_segments = list(left.segments)
+    left_segments = [(a1, a2, _segment_box(a1, a2)) for a1, a2 in left.segments]
     for b1, b2 in right.segments:
-        for a1, a2 in left_segments:
+        box = _segment_box(b1, b2)
+        for a1, a2, other in left_segments:
+            if other.gap_to(box) >= best:
+                continue
             gap = segment_to_segment(a1, a2, b1, b2)
             if gap >= best:
                 continue
@@ -99,6 +110,16 @@ def stroke_to_stroke(left: Stroke, right: Stroke, *, cutoff: float | None = None
             if cutoff is not None and best < cutoff:
                 return best
     return best
+
+
+def _segment_box(start: Point, end: Point) -> Box:
+    """The box round one segment, which is its two ends."""
+    return Box(
+        min(start.x, end.x),
+        min(start.y, end.y),
+        max(start.x, end.x),
+        max(start.y, end.y),
+    )
 
 
 def self_approach(
@@ -245,10 +266,12 @@ def closest_approach(
     pair meets. A stroke is never compared with itself; that is
     :func:`self_approach`.
     """
-    ordered = list(strokes)
+    ordered = [(stroke, stroke.bounds()) for stroke in strokes]
     best = float("inf")
-    for index, left in enumerate(ordered):
-        for right in ordered[index + 1 :]:
+    for index, (left, left_box) in enumerate(ordered):
+        for right, right_box in ordered[index + 1 :]:
+            if left_box.gap_to(right_box) >= best:
+                continue
             gap = stroke_to_stroke(left, right)
             if gap <= touch or gap >= best:
                 continue

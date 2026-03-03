@@ -8,6 +8,7 @@ when the box test is inconclusive.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -107,6 +108,23 @@ class Box:
             or other.min_y > self.max_y + tolerance
             or other.max_y < self.min_y - tolerance
         )
+
+    def gap_to(self, other: Box) -> float:
+        """The shortest distance between the two boxes, zero if they overlap.
+
+        This is a floor under the distance between anything inside one box
+        and anything inside the other, and it costs four comparisons. That
+        makes it the cheap way to decide that two pieces of geometry cannot
+        possibly be as close as something already found, without going near
+        the segments they are made of.
+        """
+        across = max(0.0, other.min_x - self.max_x, self.min_x - other.max_x)
+        up = max(0.0, other.min_y - self.max_y, self.min_y - other.max_y)
+        if across == 0.0:
+            return up
+        if up == 0.0:
+            return across
+        return math.hypot(across, up)
 
     def union(self, other: Box) -> Box:
         """The smallest box containing both."""
