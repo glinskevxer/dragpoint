@@ -6,10 +6,11 @@ runs, the depths, the order and the feeds are settled, and a post that
 changed one of them would be making a machining decision inside a file
 writer, where nobody would ever look for it.
 
-Two posts ship. The ISO one writes G code for the controls that take it. The
-plotter one writes the pen up and pen down language the older engraving
+Three posts ship. The ISO one writes G code for the controls that take it.
+The plotter one writes the pen up and pen down language the older engraving
 machines speak, which has no Z axis at all and expresses depth as a tool
-setting made once at the top of the file.
+setting made once at the top of the file. The marker one writes a job for
+the bench laser, which has no Z and no cutter either.
 
 Repeats are a post's business and not the toolpath's. A fixture holding
 twelve blanks in a row is twelve copies of one program at twelve offsets,
