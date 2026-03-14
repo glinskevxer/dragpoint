@@ -15,6 +15,14 @@ A word that will not fit on a line of its own is left where it is rather
 than broken. Hyphenating PUSHBUTTON in the middle would be worse than the
 overrun, and the overrun is something the fitter or a rule will speak up
 about anyway.
+
+A break is also allowed after a hyphen or a slash that is already in the
+legend. That is not hyphenation: nothing is added and nothing is invented,
+the break goes where the writer already put a mark, and the mark stays on
+the upper line where a reader expects it. It matters more than it sounds
+like it should, because half the legends through this shop are things like
+PUMP-HOUSE ISOLATOR and ON/OFF, and a plate that breaks those anywhere else
+has to be set smaller to fit.
 """
 
 from __future__ import annotations
@@ -25,7 +33,14 @@ from dragpoint.text.fit import measure_lines
 from dragpoint.text.style import TextStyle
 from dragpoint.units import QUANTUM
 
-__all__ = ["longest_word", "wrap_lines", "wrap_to_box"]
+__all__ = ["BREAK_AFTER", "longest_word", "wrap_lines", "wrap_to_box"]
+
+BREAK_AFTER = "-/"
+"""Characters a line may break after, the character staying on the line.
+
+Two of them and no more. A full stop looks like a break point and is not:
+GND. 400V is one legend and breaking it after the stop reads as two.
+"""
 
 
 def wrap_lines(
@@ -49,24 +64,56 @@ def wrap_lines(
     if max_lines is not None and max_lines < 1:
         raise OutOfRange("max lines", max_lines, 1, float("inf"))
 
-    words = text.split()
-    if not words:
+    pieces = break_points(text)
+    if not pieces:
         return [""]
 
     lines: list[str] = []
-    current = words[0]
-    for word in words[1:]:
+    current = pieces[0][0]
+    for piece, spaced in pieces[1:]:
+        joined = f"{current} {piece}" if spaced else f"{current}{piece}"
         if max_lines is not None and len(lines) == max_lines - 1:
-            current = f"{current} {word}"
+            current = joined
             continue
-        candidate = f"{current} {word}"
-        if measure_lines([candidate], face, style) <= limit:
-            current = candidate
+        if measure_lines([joined], face, style) <= limit:
+            current = joined
         else:
             lines.append(current)
-            current = word
+            current = piece
     lines.append(current)
     return lines
+
+
+def break_points(text: str) -> list[tuple[str, bool]]:
+    """``text`` cut into the pieces a line may start with.
+
+    Each piece comes with whether a space goes in front of it when it is
+    kept on the same line. A piece after a space needs one back; a piece
+    after a hyphen does not, because the hyphen is already there.
+    """
+    pieces: list[tuple[str, bool]] = []
+    for word in text.split():
+        for position, part in enumerate(_split_on_marks(word)):
+            pieces.append((part, position == 0 and bool(pieces)))
+    return pieces
+
+
+def _split_on_marks(word: str) -> list[str]:
+    """One word cut after every hyphen and slash inside it.
+
+    A mark at the end of a word is not a break point, because the break
+    after it is the space that follows and that is already a break.
+    """
+    parts: list[str] = []
+    held = ""
+    for character in word:
+        held += character
+        if character in BREAK_AFTER:
+            parts.append(held)
+            held = ""
+    if held:
+        parts.append(held)
+    return parts or [word]
 
 
 def wrap_to_box(
@@ -90,13 +137,15 @@ def wrap_to_box(
 
 
 def longest_word(text: str, face: StrokeFace, style: TextStyle) -> float:
-    """The width of the widest single word, which is the narrowest a wrap gets.
+    """The width of the widest piece, which is the narrowest a wrap gets.
 
-    Nothing can break a legend narrower than its longest word, so this is
-    the number to compare a plate against before deciding that wrapping will
-    save it.
+    Nothing can break a legend narrower than its longest unbreakable piece,
+    so this is the number to compare a plate against before deciding that
+    wrapping will save it. A word with a hyphen in it is not one piece: it
+    breaks there, and a plate that would have been called too narrow on the
+    whole word is not.
     """
-    words = text.split()
-    if not words:
+    pieces = break_points(text)
+    if not pieces:
         return 0.0
-    return max(measure_lines([word], face, style) for word in words)
+    return max(measure_lines([piece], face, style) for piece, _ in pieces)

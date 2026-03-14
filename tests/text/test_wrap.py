@@ -9,7 +9,7 @@ from dragpoint.font.face import StrokeFace
 from dragpoint.font.library import shipped_face
 from dragpoint.text.fit import measure_lines
 from dragpoint.text.style import TextStyle
-from dragpoint.text.wrap import longest_word, wrap_lines, wrap_to_box
+from dragpoint.text.wrap import break_points, longest_word, wrap_lines, wrap_to_box
 
 
 @pytest.fixture
@@ -128,3 +128,53 @@ def test_the_longest_word_is_the_narrowest_a_wrap_can_get(
 
 def test_an_empty_legend_has_no_longest_word(face: StrokeFace, style: TextStyle) -> None:
     assert longest_word("", face, style) == 0.0
+
+
+def test_a_legend_with_no_marks_breaks_into_words() -> None:
+    assert break_points("ONE TWO") == [("ONE", False), ("TWO", True)]
+
+
+def test_a_hyphen_is_a_break_point_and_stays_on_the_line() -> None:
+    assert break_points("PUMP-HOUSE") == [("PUMP-", False), ("HOUSE", False)]
+
+
+def test_a_slash_is_a_break_point_too() -> None:
+    assert break_points("ON/OFF") == [("ON/", False), ("OFF", False)]
+
+
+def test_a_word_with_two_marks_breaks_at_both() -> None:
+    assert [piece for piece, _ in break_points("A/B/C")] == ["A/", "B/", "C"]
+
+
+def test_a_mark_at_the_end_of_a_word_is_not_a_break_point() -> None:
+    assert [piece for piece, _ in break_points("STOP- NOW")] == ["STOP-", "NOW"]
+
+
+def test_a_space_goes_back_in_front_of_the_first_piece_of_a_word() -> None:
+    assert break_points("ON/OFF SWITCH")[2] == ("SWITCH", True)
+
+
+def test_nothing_at_all_breaks_into_nothing() -> None:
+    assert break_points("   ") == []
+
+
+def test_a_legend_breaks_at_a_hyphen_when_it_has_to(face: StrokeFace, style: TextStyle) -> None:
+    narrow = measure_lines(["PUMP-"], face, style) + 0.2
+    assert wrap_lines("PUMP-HOUSE", face, style, narrow) == ["PUMP-", "HOUSE"]
+
+
+def test_a_legend_that_fits_is_not_broken_at_its_hyphen(face: StrokeFace, style: TextStyle) -> None:
+    wide = measure_lines(["PUMP-HOUSE"], face, style) + 1.0
+    assert wrap_lines("PUMP-HOUSE", face, style, wide) == ["PUMP-HOUSE"]
+
+
+def test_a_break_at_a_hyphen_does_not_put_a_space_back(face: StrokeFace, style: TextStyle) -> None:
+    narrow = measure_lines(["ON/"], face, style) + 0.2
+    assert wrap_lines("ON/OFF", face, style, narrow) == ["ON/", "OFF"]
+
+
+def test_the_narrowest_a_legend_wraps_to_is_its_longest_piece(
+    face: StrokeFace, style: TextStyle
+) -> None:
+    whole = measure_lines(["PUMP-HOUSE"], face, style)
+    assert longest_word("PUMP-HOUSE", face, style) < whole
