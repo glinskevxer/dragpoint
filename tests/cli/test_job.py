@@ -353,3 +353,43 @@ def test_cards_write_to_a_file(runner: CliRunner, tmp_path: Path) -> None:
     result = run(runner, "job", "cards", str(EXAMPLE), "--out", str(target))
     assert result.exit_code == 0
     assert "TRAVELLER" in target.read_text(encoding="utf-8")
+
+
+def test_drilling_a_plate_with_two_drills_writes_a_file_each(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    schedule = tmp_path / "two.toml"
+    schedule.write_text(
+        "[job]\n"
+        'name = "TWO"\n\n'
+        "[[plate]]\n"
+        'name = "P-1"\n'
+        'size = ["120mm", "25mm"]\n'
+        'stock = "LAM16-BW"\n'
+        'lines = ["RUN"]\n\n'
+        "  [[plate.feature]]\n"
+        '  name = "fix"\n'
+        '  kind = "hole"\n'
+        '  at = ["10mm", "12.5mm"]\n'
+        '  diameter = "4.2mm"\n\n'
+        "  [[plate.feature]]\n"
+        '  name = "bore"\n'
+        '  kind = "hole"\n'
+        '  at = ["60mm", "12.5mm"]\n'
+        '  diameter = "8mm"\n',
+        encoding="utf-8",
+    )
+    out = tmp_path / "nc"
+    result = run(runner, "job", "drill", str(schedule), "--out", str(out))
+    assert result.exit_code == 0
+    written = sorted(path.name for path in out.iterdir())
+    assert written == ["P-1-drill-4p2mm.nc", "P-1-drill-8mm.nc"]
+
+
+def test_drilling_a_plate_with_one_drill_keeps_the_plain_name(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    out = tmp_path / "nc"
+    result = run(runner, "job", "drill", str(EXAMPLE), "--out", str(out))
+    assert result.exit_code == 0
+    assert any(path.name.endswith("-drill.nc") for path in out.iterdir())

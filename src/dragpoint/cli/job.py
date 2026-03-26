@@ -20,7 +20,7 @@ from dragpoint.cli.common import (
     plate_json,
     write_out,
 )
-from dragpoint.compiler.drill import DEFAULT_PECK, drill_plate
+from dragpoint.compiler.drill import DEFAULT_PECK, DrillRun, drill_plate
 from dragpoint.compiler.job import compile_job
 from dragpoint.compiler.plate import rule_selection
 from dragpoint.compiler.settings import MachineSetup
@@ -244,15 +244,31 @@ def drill_job(schedule: Path, out: Path, peck: str, all_plates: bool) -> None:
     for plan in plans:
         if not len(plan) and not all_plates:
             continue
-        text = render(
-            spec.post,
-            plan.toolpath,
-            PostOptions(
-                program=f"{spec.name} {plan.name} DRILL",
-                spindle=plan.stock.spindle,
-                notes=(f"{len(plan)} holes {plan.depth:.2f}mm deep in {plan.stock.name}",),
-            ),
-        )
-        write_out(text, out / f"{plan.name}-drill.{_extension(spec.post)}")
+        for run in plan.runs if len(plan.runs) > 1 else (None,):
+            text = render(
+                spec.post,
+                plan.toolpath if run is None else run.toolpath,
+                PostOptions(
+                    program=f"{spec.name} {plan.name} DRILL",
+                    spindle=plan.stock.spindle,
+                    notes=(
+                        f"{len(plan) if run is None else len(run)} holes "
+                        f"{plan.depth:.2f}mm deep in {plan.stock.name}",
+                    ),
+                ),
+            )
+            write_out(text, out / f"{plan.name}{_drill_suffix(run)}.{_extension(spec.post)}")
         written += 1
     click.echo(f"{written} plates have holes in them")
+
+
+def _drill_suffix(run: DrillRun | None) -> str:
+    """What goes on the end of a drilling file name.
+
+    A plate with one drill in it gets one file with a plain name, because
+    that is what it was before there were runs and what an operator with a
+    plate of four identical fixing holes expects to find.
+    """
+    if run is None:
+        return "-drill"
+    return f"-drill-{run.diameter:g}mm".replace(".", "p")

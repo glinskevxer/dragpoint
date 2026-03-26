@@ -13,6 +13,17 @@ lives here rather than in a writer of its own.
 Pecking is not optional on laminate. A drill that goes straight through
 2 mm of phenolic in one plunge melts the swarf into the flutes, and the next
 hole is drilled by a drill with a plug of plastic on the end of it.
+
+Holes are grouped by diameter and each group is a program of its own. There
+is one drill in the spindle at a time, so a plate with a 3.2 and two 6 mm
+holes on it is a 3.2 program, a drill change and a 6 mm program. Walking the
+holes in the order they sit on the plate would be the shortest path and
+would also mean changing the drill at every hole, which is the sort of
+optimisation that only looks like one.
+
+The small drill goes first. A small drill dropped into a hole a big one has
+already opened has nothing to centre it and wanders off across the plate,
+and the other way round the big one just opens the small one out.
 """
 
 from __future__ import annotations
@@ -29,7 +40,7 @@ from dragpoint.spec.plate import PlateSpec
 from dragpoint.tool.material import Material, material
 from dragpoint.units import QUANTUM
 
-__all__ = ["DEFAULT_PECK", "DrillPlan", "drill_plate", "drillable"]
+__all__ = ["DEFAULT_PECK", "DrillPlan", "DrillRun", "drill_plate", "drillable"]
 
 DEFAULT_PECK = 0.5
 """Millimetres of depth per peck, before the drill comes out to clear."""
@@ -47,20 +58,61 @@ def drillable(spec: PlateSpec) -> tuple[Feature, ...]:
 
 
 @dataclass(frozen=True, slots=True)
+class DrillRun:
+    """Every hole of one diameter, and the program that makes them.
+
+    One run is one drill. What the operator does between runs is change it,
+    which is why they are kept apart rather than merged into one program
+    that would be shorter and unrunnable.
+    """
+
+    diameter: float
+    holes: tuple[Feature, ...]
+    toolpath: Toolpath
+
+    def __len__(self) -> int:
+        return len(self.holes)
+
+    def __str__(self) -> str:
+        return f"{self.diameter:g}mm: {len(self.holes)} holes"
+
+
+@dataclass(frozen=True, slots=True)
 class DrillPlan:
-    """Every hole on one plate, and the program that makes them."""
+    """Every hole on one plate, drill by drill."""
 
     plate: PlateSpec
     stock: Material
     holes: tuple[Feature, ...]
     depth: float
     peck: float
-    toolpath: Toolpath
+    runs: tuple[DrillRun, ...]
 
     @property
     def name(self) -> str:
         """The plate these holes belong to."""
         return self.plate.name
+
+    @property
+    def toolpath(self) -> Toolpath:
+        """Every run's moves end to end, for a caller that wants one path.
+
+        Useful for measuring and for drawing. Not useful for cutting, since
+        it runs three drills without stopping to change any of them, and a
+        caller posting a file wants :attr:`runs`.
+        """
+        moves = tuple(move for run in self.runs for move in run.toolpath.moves)
+        first = self.runs[0].toolpath if self.runs else None
+        return Toolpath(
+            moves=moves,
+            safe=first.safe if first else Toolpath().safe,
+            clearance=first.clearance if first else Toolpath().clearance,
+        )
+
+    @property
+    def tool_changes(self) -> int:
+        """How many times the drill comes out and another goes in."""
+        return max(0, len(self.runs) - 1)
 
     @property
     def pecks_per_hole(self) -> int:
@@ -74,6 +126,14 @@ class DrillPlan:
         changes, which is the number the setter wants before anything else.
         """
         return tuple(sorted({hole.width for hole in self.holes}))
+
+    def run_for(self, diameter: float) -> DrillRun:
+        """The run for one diameter."""
+        for run in self.runs:
+            if abs(run.diameter - diameter) < QUANTUM:
+                return run
+        listed = ", ".join(f"{size:g}" for size in self.diameters()) or "none"
+        raise KeyError(f"{self.name} has no {diameter:g}mm holes, it has {listed}")
 
     def __len__(self) -> int:
         return len(self.holes)
@@ -137,14 +197,29 @@ def drill_plate(
     holes = drillable(spec)
     depth = sheet.thickness + BREAKTHROUGH
 
-    moves: list[Move] = []
-    for hole in _nearest_order(holes, machine.origin):
-        moves.extend(_cycle(hole, depth, peck, machine, sheet.plunge_feed))
+    runs: list[DrillRun] = []
+    here = machine.origin
+    for diameter in sorted({hole.width for hole in holes}):
+        group = tuple(hole for hole in holes if abs(hole.width - diameter) < QUANTUM)
+        ordered = _nearest_order(group, here)
+        moves: list[Move] = []
+        for hole in ordered:
+            moves.extend(_cycle(hole, depth, peck, machine, sheet.plunge_feed))
+        here = ordered[-1].centre if ordered else here
+        runs.append(
+            DrillRun(
+                diameter=diameter,
+                holes=tuple(ordered),
+                toolpath=Toolpath(
+                    moves=tuple(moves), safe=machine.safe, clearance=machine.clearance
+                ),
+            )
+        )
     return DrillPlan(
         plate=spec,
         stock=sheet,
         holes=holes,
         depth=depth,
         peck=peck,
-        toolpath=Toolpath(moves=tuple(moves), safe=machine.safe, clearance=machine.clearance),
+        runs=tuple(runs),
     )
