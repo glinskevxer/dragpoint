@@ -265,3 +265,26 @@ def test_the_fixture_can_step_in_y(runner: CliRunner) -> None:
     )
     assert result.exit_code == 0
     assert "G52 X0.0000 Y25.0000" in result.output
+
+
+def test_cutout_posts_a_window_program(runner: CliRunner) -> None:
+    result = run(
+        runner,
+        "plate",
+        "cutout",
+        "--size",
+        "120x60mm",
+        "--stock",
+        "LAM32-RW",
+        "--window",
+        "40x20mm@60,30mm",
+        "METER",
+    )
+    assert result.exit_code == 0
+    assert "G01" in result.output
+
+
+def test_cutout_on_a_plate_with_no_windows_posts_an_empty_program(runner: CliRunner) -> None:
+    result = run(runner, "plate", "cutout", "--size", "60x20mm", "RUN")
+    assert result.exit_code == 0
+    assert "nothing to mill" in result.output

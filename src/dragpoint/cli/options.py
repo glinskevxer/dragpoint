@@ -21,7 +21,7 @@ from dragpoint.text.fit import FitPolicy
 from dragpoint.text.layout import HAlign, VAlign
 from dragpoint.units import parse_length
 
-__all__ = ["plate_from_options", "plate_options", "setup_from_options"]
+__all__ = ["parse_size", "plate_from_options", "plate_options", "setup_from_options"]
 
 Command = TypeVar("Command", bound=Callable[..., Any])
 
@@ -89,7 +89,7 @@ def plate_options(command: Command) -> Command:
     return command
 
 
-def _size(text: str) -> tuple[float, float]:
+def parse_size(text: str) -> tuple[float, float]:
     """Read ``60x20mm`` into a width and a height.
 
     A unit on the whole thing applies to both, which is how everybody
@@ -105,7 +105,7 @@ def _size(text: str) -> tuple[float, float]:
 
 def plate_from_options(options: dict[str, Any]) -> PlateSpec:
     """Build a plate spec from the parsed options."""
-    width, height = _size(str(options["size"]))
+    width, height = parse_size(str(options["size"]))
     return PlateSpec(
         name=str(options["name"]),
         width=width,

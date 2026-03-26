@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from dragpoint.cli.options import _size, plate_from_options, setup_from_options
+from dragpoint.cli.options import parse_size, plate_from_options, setup_from_options
 from dragpoint.geometry.point import Point
 from dragpoint.path.cut import PassOrder
 from dragpoint.text.fit import FitPolicy
@@ -61,18 +61,20 @@ def defaults(**overrides: Any) -> dict[str, Any]:
         ("60*20mm", (60.0, 20.0)),
     ],
 )
-def test_a_size_reads_the_way_people_write_one(text: str, expected: tuple[float, float]) -> None:
-    assert _size(text) == pytest.approx(expected)
+def test_aparse_size_reads_the_way_people_write_one(
+    text: str, expected: tuple[float, float]
+) -> None:
+    assert parse_size(text) == pytest.approx(expected)
 
 
 def test_a_unit_on_the_second_number_applies_to_both() -> None:
-    assert _size("2x1in")[0] == pytest.approx(50.8)
+    assert parse_size("2x1in")[0] == pytest.approx(50.8)
 
 
 @pytest.mark.parametrize("text", ["wide", "60mm", "60x20x10mm"])
-def test_something_that_is_not_a_size_is_refused(text: str) -> None:
+def test_something_that_is_not_aparse_size_is_refused(text: str) -> None:
     with pytest.raises(ValueError, match="not a size"):
-        _size(text)
+        parse_size(text)
 
 
 def test_the_defaults_make_the_plate_the_shop_cuts_most() -> None:

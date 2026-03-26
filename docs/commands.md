@@ -207,6 +207,47 @@ Compile a plate and print what the rules say about it.
 | `--quiet` | Say nothing, just set the exit code. |  |
 | `--json` | Print the whole thing as JSON. |  |
 
+### `dragpoint plate cutout [LINES...]`
+
+Post the window milling for one plate as a program of its own.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--name` | Plate name. | `PLATE` |
+| `--size` | Plate size, WxH. | `60x20mm` |
+| `--stock` | Stock code. | `LAM16-BW` |
+| `--face` |  | `panelgothic` |
+| `--cap-height` | Lettering height. | `3mm` |
+| `--tracking` | Space per glyph. | `0mm` |
+| `--condense` | Horizontal squeeze. | `1.0` |
+| `--slant` | Oblique, in degrees. |  |
+| `--mirror` | Cut it back to front. |  |
+| `--wrap` | Break long lines to fit. |  |
+| `--fit` |  | `condense` |
+| `--halign` |  | `centre` |
+| `--valign` |  | `middle` |
+| `--margin` | Engraving margin. | `2mm` |
+| `--border` | Engraved border inset. |  |
+| `--depth` | Cut depth, else the stock nominal. |  |
+| `--cutter` | Cutter name, else the shop default. |  |
+| `--arc` | Set the legend round this radius. |  |
+| `--arc-start` | Degrees at the middle. | `90.0` |
+| `--arc-sweep` | Degrees allowed. | `180.0` |
+| `--arc-clockwise` | Run the legend the other way. |  |
+| `--arc-inward` | Letters face the middle. |  |
+| `--safe` | Full retract height. | `5mm` |
+| `--ramp` | Lead in to depth. | `0mm` |
+| `--clearance` | Hop height. | `0.5mm` |
+| `--hop` | Lift high above this move. | `25mm` |
+| `--no-optimise` | Leave the travel order alone. |  |
+| `--pass-order` |  | `by-pass` |
+| `--rapid-rate` | Rapid mm/min. | `6000.0` |
+| `--post` |  | `iso` |
+| `--out` |  |  |
+| `--tab` | Width of a tab. | `2.0mm` |
+| `--no-tabs` | Cut the window right out, holding nothing. |  |
+| `--window` | A window this size at this centre. May be given more than once. |  |
+
 ### `dragpoint plate draw [LINES...]`
 
 Draw one plate as an SVG preview or a DXF.
