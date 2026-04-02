@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from dragpoint.compiler.cutout import cutout_plate
 from dragpoint.compiler.drill import drill_plate
 from dragpoint.compiler.job import EngravedJob
 from dragpoint.compiler.plate import EngravedPlate
@@ -101,6 +102,27 @@ def _drilling(job: EngravedJob) -> list[str]:
     return lines
 
 
+def _windows(job: EngravedJob) -> list[str]:
+    """The window milling, which is a setup of its own and often forgotten.
+
+    On the sheet because the plate that needs a window cut in it looks
+    exactly like the plate that does not until somebody reads the schedule,
+    and by then it has been engraved and the window has to be cut round the
+    lettering with the legend already on it.
+    """
+    plans = [cutout_plate(plate.spec) for plate in job]
+    milled = [plan for plan in plans if len(plan)]
+    if not milled:
+        return []
+    lines = ["", "windows"]
+    for plan in milled:
+        lines.append(f"  {plan}")
+        lines.append(
+            f"  {'':<10}{plan.tabs_per_window} tabs a window, {plan.tab_height:g}mm left under"
+        )
+    return lines
+
+
 def _tips(job: EngravedJob) -> list[str]:
     """What the job asks of each cutter, and whether one tip covers it.
 
@@ -163,6 +185,7 @@ def setup_sheet(
             for name, count in nest.left_over:
                 lines.append(f"          {count} of {name} did not fit")
 
+    lines.extend(_windows(job))
     lines.extend(_tips(job))
     lines.extend(_drilling(job))
     lines.extend(_violations(job))

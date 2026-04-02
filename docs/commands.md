@@ -114,6 +114,16 @@ Compile a schedule and print what the rules say.
 | `--quiet` | Say nothing, just set the exit code. |  |
 | `--json` | Print the whole thing as JSON. |  |
 
+### `dragpoint job cutout SCHEDULE`
+
+Post the window milling for every plate that has windows in it.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--out` | Directory to write the window programs into. |  |
+| `--tab` | Width of a tab. | `2.0mm` |
+| `--no-tabs` | Cut the windows right out, holding nothing. |  |
+
 ### `dragpoint job drill SCHEDULE`
 
 Post the drilling for every plate that has holes in it.

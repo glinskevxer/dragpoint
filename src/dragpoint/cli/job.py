@@ -20,6 +20,7 @@ from dragpoint.cli.common import (
     plate_json,
     write_out,
 )
+from dragpoint.compiler.cutout import DEFAULT_TAB_WIDTH, cutout_plate
 from dragpoint.compiler.drill import DEFAULT_PECK, DrillRun, drill_plate
 from dragpoint.compiler.job import compile_job
 from dragpoint.compiler.plate import rule_selection
@@ -222,6 +223,43 @@ def cards(schedule: Path, out: Path | None, only: str | None) -> None:
         wanted = (made.plate(only),) if only else tuple(made)
         text = travellers(wanted)
     write_out(text, out)
+
+
+@job.command("cutout")
+@SCHEDULE
+@click.option(
+    "--out",
+    type=click.Path(file_okay=False, path_type=Path),
+    required=True,
+    help="Directory to write the window programs into.",
+)
+@click.option("--tab", default=f"{DEFAULT_TAB_WIDTH}mm", show_default=True, help="Width of a tab.")
+@click.option("--no-tabs", is_flag=True, help="Cut the windows right out, holding nothing.")
+def cutout_job(schedule: Path, out: Path, tab: str, no_tabs: bool) -> None:
+    """Post the window milling for every plate that has windows in it."""
+    with handled():
+        spec = read_schedule(schedule)
+        width = 0.0 if no_tabs else parse_length(tab)
+        plans = [cutout_plate(plate, tab_width=width) for plate in spec.plates]
+    written = 0
+    for plan in plans:
+        if not len(plan):
+            continue
+        text = render(
+            spec.post,
+            plan.toolpath,
+            PostOptions(
+                program=f"{spec.name} {plan.name} CUTOUT",
+                spindle=plan.stock.spindle,
+                notes=(
+                    f"{len(plan)} windows {plan.depth:.2f}mm deep with {plan.cutter.name}",
+                    f"{plan.tabs_per_window} tabs a window at {plan.tab_height:g}mm",
+                ),
+            ),
+        )
+        write_out(text, out / f"{plan.name}-cutout.{_extension(spec.post)}")
+        written += 1
+    click.echo(f"{written} plates have windows in them")
 
 
 @job.command("drill")

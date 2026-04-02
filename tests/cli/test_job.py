@@ -393,3 +393,75 @@ def test_drilling_a_plate_with_one_drill_keeps_the_plain_name(
     result = run(runner, "job", "drill", str(EXAMPLE), "--out", str(out))
     assert result.exit_code == 0
     assert any(path.name.endswith("-drill.nc") for path in out.iterdir())
+
+
+WINDOW_JOB = """
+[job]
+name = "WIN"
+
+[[plate]]
+name = "P-1"
+size = ["120mm", "60mm"]
+stock = "LAM32-RW"
+lines = ["METER"]
+cap_height = "4mm"
+margin = "3mm"
+
+  [[plate.feature]]
+  name = "meter"
+  kind = "cutout"
+  at = ["60mm", "14mm"]
+  width = "40mm"
+  height = "16mm"
+"""
+"""One plate, one window, and nothing the rules object to."""
+
+
+def window_schedule(path: Path) -> Path:
+    """A schedule with one plate that has a meter window in it."""
+    path.write_text(WINDOW_JOB, encoding="utf-8")
+    return path
+
+
+def test_cutout_writes_a_program_for_a_plate_with_a_window(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    schedule = window_schedule(tmp_path / "win.toml")
+    out = tmp_path / "nc"
+    result = run(runner, "job", "cutout", str(schedule), "--out", str(out))
+    assert result.exit_code == 0
+    assert (out / "P-1-cutout.nc").exists()
+    assert "1 plates have windows" in result.output
+
+
+def test_cutout_skips_the_plates_with_no_windows(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "nc"
+    result = run(runner, "job", "cutout", str(EXAMPLE), "--out", str(out))
+    assert result.exit_code == 0
+    assert "0 plates have windows" in result.output
+
+
+def test_cutout_can_be_told_to_hold_nothing(runner: CliRunner, tmp_path: Path) -> None:
+    schedule = window_schedule(tmp_path / "win.toml")
+    out = tmp_path / "nc"
+    result = run(runner, "job", "cutout", str(schedule), "--out", str(out), "--no-tabs")
+    assert result.exit_code == 0
+    assert "0 tabs a window" in (out / "P-1-cutout.nc").read_text(encoding="utf-8")
+
+
+def test_the_setup_sheet_says_which_plates_need_windows_milling(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    schedule = window_schedule(tmp_path / "win.toml")
+    result = run(runner, "job", "sheet", str(schedule))
+    assert result.exit_code == 0
+    assert "windows" in result.output
+    assert "tabs a window" in result.output
+
+
+def test_the_setup_sheet_of_a_job_with_no_windows_says_nothing_about_them(
+    runner: CliRunner,
+) -> None:
+    result = run(runner, "job", "sheet", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "tabs a window" not in result.output
