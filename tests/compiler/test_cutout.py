@@ -7,6 +7,7 @@ import pytest
 from dragpoint.compiler.cutout import (
     BREAKTHROUGH,
     DEFAULT_TAB_WIDTH,
+    CutoutPlan,
     cutout_plate,
     cuttable,
     offcut_area,
@@ -15,6 +16,7 @@ from dragpoint.compiler.cutout import (
 )
 from dragpoint.errors import OutOfRange
 from dragpoint.geometry.point import Point
+from dragpoint.path.cut import Cut
 from dragpoint.spec.feature import Feature, FeatureKind
 from dragpoint.spec.plate import PlateSpec
 from dragpoint.tool.cutter import catalogue_cutter
@@ -34,6 +36,12 @@ def spec(**overrides: object) -> PlateSpec:
     }
     values.update(overrides)
     return PlateSpec(**values)  # type: ignore[arg-type]
+
+
+def bridges(plan: CutoutPlan) -> list[Cut]:
+    """The shallow runs on the last pass, which are the tabs being crossed."""
+    last = [cut for cut in plan.cuts if cut.pass_index == plan.passes - 1]
+    return [cut for cut in last if cut.depth < plan.depth]
 
 
 def test_a_rectangular_cutout_gets_milled() -> None:
@@ -96,18 +104,47 @@ def test_every_pass_but_the_last_goes_right_round_in_one() -> None:
         assert len([cut for cut in plan.cuts if cut.pass_index == index]) == 1
 
 
-def test_the_last_pass_is_broken_into_four_runs_by_four_tabs() -> None:
+def test_the_last_pass_has_four_full_depth_runs_between_the_tabs() -> None:
     plan = cutout_plate(spec())
     last = [cut for cut in plan.cuts if cut.pass_index == plan.passes - 1]
-    assert len(last) == 4
+    walls = [cut for cut in last if cut.depth == pytest.approx(plan.depth)]
+    assert len(walls) == 4
     assert plan.tabs_per_window == 4
+
+
+def test_the_tabs_come_to_four_tab_widths_of_shallow_cutting() -> None:
+    plan = cutout_plate(spec())
+    crossed = sum(cut.stroke.length() for cut in bridges(plan))
+    assert crossed == pytest.approx(4.0 * plan.tab_width)
+
+
+def test_the_tab_at_the_seam_is_cut_in_two_halves() -> None:
+    plan = cutout_plate(spec())
+    halves = [
+        cut for cut in bridges(plan) if cut.stroke.length() == pytest.approx(plan.tab_width / 2.0)
+    ]
+    assert len(halves) == 2
+
+
+def test_a_bridge_is_cut_at_the_tab_height_above_the_bottom() -> None:
+    plan = cutout_plate(spec())
+    assert all(cut.depth == pytest.approx(plan.depth - plan.tab_height) for cut in bridges(plan))
+
+
+def test_a_taller_tab_leaves_more_material_under_it() -> None:
+    thin = cutout_plate(spec(), tab_height=0.2)
+    thick = cutout_plate(spec(), tab_height=0.6)
+    assert min(cut.depth for cut in bridges(thick)) < min(cut.depth for cut in bridges(thin))
+
+
+def test_a_tab_taller_than_the_sheet_still_cuts_something() -> None:
+    plan = cutout_plate(spec(), tab_height=50.0)
+    assert min(cut.depth for cut in bridges(plan)) > 0.0
 
 
 def test_a_tab_is_as_wide_as_it_was_asked_to_be() -> None:
     plan = cutout_plate(spec(), tab_width=3.0)
-    last = [cut for cut in plan.cuts if cut.pass_index == plan.passes - 1]
-    gap = last[0].start.distance_to(last[-1].end)
-    assert gap == pytest.approx(3.0)
+    assert sum(cut.stroke.length() for cut in bridges(plan)) == pytest.approx(12.0)
 
 
 def test_turning_the_tabs_off_leaves_one_run_all_the_way_round() -> None:
@@ -115,6 +152,7 @@ def test_turning_the_tabs_off_leaves_one_run_all_the_way_round() -> None:
     last = [cut for cut in plan.cuts if cut.pass_index == plan.passes - 1]
     assert len(last) == 1
     assert plan.tabs_per_window == 0
+    assert all(cut.depth == pytest.approx(plan.depth) for cut in last)
 
 
 def test_a_negative_tab_is_refused() -> None:
