@@ -16,6 +16,7 @@ from dragpoint.spec.job import JobSpec
 from dragpoint.spec.load import load_job
 from dragpoint.spec.plate import PlateSpec
 from dragpoint.text.fit import FitPolicy
+from dragpoint.text.layout import HAlign, VAlign
 
 from .conftest import EXAMPLE, plate_spec
 
@@ -379,3 +380,77 @@ def test_the_missing_glyph_rule_reads_the_lines_that_were_set() -> None:
     found = made.report.by_rule("legend-missing-glyph")
     assert not found.clean
     assert found.violations[0].subject == "P-101 line 1"
+
+
+def test_a_top_aligned_legend_leaves_the_groove_room_at_the_edge() -> None:
+    made = compile_plate(
+        plate_spec(
+            name="P-TOP",
+            lines=("METER",),
+            width=120.0,
+            height=60.0,
+            cap_height=4.0,
+            valign=VAlign.TOP,
+        )
+    )
+    assert made.ok, str(made.report)
+
+
+def test_a_bottom_aligned_legend_does_as_well() -> None:
+    made = compile_plate(
+        plate_spec(
+            name="P-BOT",
+            lines=("METER",),
+            width=120.0,
+            height=60.0,
+            cap_height=4.0,
+            valign=VAlign.BOTTOM,
+        )
+    )
+    assert made.ok, str(made.report)
+
+
+def test_the_lettering_sits_inside_the_area_by_half_a_groove() -> None:
+    made = compile_plate(
+        plate_spec(
+            name="P-TOP",
+            lines=("METER",),
+            width=120.0,
+            height=60.0,
+            cap_height=4.0,
+            valign=VAlign.TOP,
+        )
+    )
+    box = made.text.ink_bounds()
+    area = made.spec.area()
+    assert box is not None
+    assert area.max_y - box.max_y >= made.passes.groove_width / 2.0 - 1e-9
+
+
+def test_a_wider_groove_pulls_the_lettering_further_in() -> None:
+    def top_of(cutter: str) -> float:
+        made = compile_plate(
+            plate_spec(
+                name="P-TOP",
+                lines=("METER",),
+                width=120.0,
+                height=60.0,
+                cap_height=4.0,
+                valign=VAlign.TOP,
+                cutter=cutter,
+            )
+        )
+        box = made.text.ink_bounds()
+        assert box is not None
+        return box.max_y
+
+    assert top_of("V90-030") < top_of("V10-005")
+
+
+def test_a_left_aligned_legend_leaves_the_same_room() -> None:
+    made = compile_plate(
+        plate_spec(name="P-L", lines=("METER",), halign=HAlign.LEFT, cap_height=3.0)
+    )
+    box = made.text.ink_bounds()
+    assert box is not None
+    assert box.min_x - made.spec.area().min_x >= made.passes.groove_width / 2.0 - 1e-9

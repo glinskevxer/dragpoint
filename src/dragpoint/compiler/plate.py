@@ -156,9 +156,19 @@ def _lines_of(spec: PlateSpec, face: StrokeFace) -> tuple[str, ...]:
 
 
 def _lay_out(
-    spec: PlateSpec, face: StrokeFace, style: TextStyle, lines: tuple[str, ...]
+    spec: PlateSpec,
+    face: StrokeFace,
+    style: TextStyle,
+    lines: tuple[str, ...],
+    groove: float = 0.0,
 ) -> LaidOutText:
     """Lay the lines out, either in the engraving area or ready to be bent.
+
+    The area is pulled in by half the groove first. Everything above this
+    layer works in centrelines, and a centreline on the edge of the area is
+    a groove half over the line: a plate set hard against its margin comes
+    out failing the area rule by a hundredth of a millimetre, which is true,
+    unhelpful, and happens on every top aligned plate this shop cuts.
 
     Text that is going to be bent is laid out about the origin instead: x
     zero is the middle of the block and the first baseline is y zero, which
@@ -171,7 +181,7 @@ def _lay_out(
             lines,
             face,
             style,
-            box=spec.area(),
+            box=spec.area().grown(-groove / 2.0),
             halign=spec.halign,
             valign=spec.valign,
         )
@@ -229,7 +239,7 @@ def compile_plate(
 
     lines = _lines_of(spec, face)
     fit = fit_lines(lines, face, spec.style(), spec.fit_limit(), spec.fit)
-    text = _lay_out(spec, face, fit.style, lines)
+    text = _lay_out(spec, face, fit.style, lines, cutter.width_at_depth(depth))
     lettering = _text_strokes(spec, text)
 
     drawn = lettering + tuple(_border_strokes(spec))
