@@ -13,12 +13,22 @@ why.
 Layers carry the meaning. The engraving is on ENGRAVE, the blank on OUTLINE,
 the holes on FEATURES, and a shop that only wants to see one of those turns
 the others off rather than asking for a different file.
+
+Two more layers say what the other setups will do. MILL carries the path the
+cutter takes round a window, which is not the window: it is the window less
+the cutter radius, with a gap at every tab. DRILL carries a cross at each
+hole centre. Both are there because the drawing is what gets checked before
+anything is cut, and a window that has been drawn at its finished size and
+milled at its finished size is a window a cutter radius too big.
 """
 
 from __future__ import annotations
 
+from dragpoint.compiler.cutout import cutout_plate
+from dragpoint.compiler.drill import drillable
 from dragpoint.compiler.plate import EngravedPlate
 from dragpoint.geometry.box import Box
+from dragpoint.geometry.point import Point
 from dragpoint.geometry.stroke import Stroke
 from dragpoint.spec.feature import Feature
 
@@ -30,8 +40,13 @@ LAYERS: dict[str, int] = {
     "ENGRAVE": 1,
     "BORDER": 3,
     "FEATURES": 5,
+    "MILL": 2,
+    "DRILL": 4,
 }
 """Layer name to AutoCAD colour number."""
+
+CROSS = 1.5
+"""Millimetres each arm of a drill centre cross is drawn."""
 
 
 def render_dxf(plate: EngravedPlate, *, decimals: int = 4) -> str:
@@ -113,6 +128,11 @@ def _entities(out: list[str], plate: EngravedPlate, decimals: int) -> None:
         _rectangle(out, border, "BORDER", decimals)
     for feature in plate.spec.features:
         _feature(out, feature, decimals)
+    for hole in drillable(plate.spec):
+        _cross(out, hole, decimals)
+    for cut in cutout_plate(plate.spec).cuts:
+        if cut.pass_index == 0:
+            _polyline(out, cut.stroke, "MILL", decimals)
     for stroke in plate.runs:
         _polyline(out, stroke, "ENGRAVE", decimals)
     out.extend(_pair(0, "ENDSEC"))
@@ -141,6 +161,21 @@ def _rectangle(out: list[str], box: Box, layer: str, decimals: int) -> None:
     """A closed rectangle, drawn as a polyline back to its first corner."""
     corners = box.corners
     _polyline(out, Stroke(tuple(corners) + (corners[0],)), layer, decimals)
+
+
+def _cross(out: list[str], hole: Feature, decimals: int) -> None:
+    """A centre mark at a hole, because a circle has no centre in a DXF.
+
+    Every drawing office puts one there and every shop expects one. Without
+    it a hole is a circle nobody can snap to.
+    """
+    centre = hole.centre
+    arm = min(CROSS, hole.radius)
+    for start, end in (
+        (Point(centre.x - arm, centre.y), Point(centre.x + arm, centre.y)),
+        (Point(centre.x, centre.y - arm), Point(centre.x, centre.y + arm)),
+    ):
+        _polyline(out, Stroke((start, end)), "DRILL", decimals)
 
 
 def _feature(out: list[str], feature: Feature, decimals: int) -> None:

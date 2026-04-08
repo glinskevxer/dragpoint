@@ -14,6 +14,7 @@ Y is flipped once, here. Everywhere else in dragpoint y is up.
 
 from __future__ import annotations
 
+from dragpoint.compiler.cutout import cutout_plate
 from dragpoint.compiler.plate import EngravedPlate
 from dragpoint.geometry.box import Box
 from dragpoint.geometry.point import Point
@@ -36,6 +37,9 @@ GROOVE_COLOUR = "#202020"
 
 TRAVEL_COLOUR = "#7090c0"
 """Rapid moves, pale enough to ignore when they are not the question."""
+
+MILL_COLOUR = "#308030"
+"""The path a window is milled on, which is not the window."""
 
 
 def render_svg(
@@ -72,6 +76,7 @@ def render_svg(
         parts.append(_rect(border, AREA_COLOUR, 0.05, dashed=True))
     if show_features:
         parts.extend(_feature(item) for item in plate.spec.features)
+        parts.extend(_milling(plate))
     if show_travel:
         parts.append(_travel(plate))
     groove = _width(plate)
@@ -114,6 +119,26 @@ def _feature(item: Feature) -> str:
         body = _rect(item.bounds(), FEATURE_COLOUR, 0.1)
         ring = _rect(item.keepout_bounds(), FEATURE_COLOUR, 0.05, dashed=True)
     return body + "\n" + ring
+
+
+def _milling(plate: EngravedPlate) -> list[str]:
+    """The window paths, drawn at the width of the cutter that mills them.
+
+    One pass of it. Ten passes down the same line draw the same line ten
+    times and take ten times as long to open.
+    """
+    plan = cutout_plate(plate.spec)
+    drawn: list[str] = []
+    for cut in plan.cuts:
+        if cut.pass_index != 0:
+            continue
+        points = " ".join(f"{point.x:.4f},{point.y:.4f}" for point in cut.stroke.points)
+        drawn.append(
+            f'    <polyline points="{points}" fill="none" stroke="{MILL_COLOUR}" '
+            f'stroke-width="{plan.cutter.tip_width:.4f}" stroke-linecap="round" '
+            f'stroke-linejoin="round" stroke-opacity="0.5" />'
+        )
+    return drawn
 
 
 def _groove(stroke: Stroke, width: float) -> str:

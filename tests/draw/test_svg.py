@@ -138,3 +138,43 @@ def test_a_blank_plate_has_no_travel_to_draw() -> None:
 
 def test_the_file_ends_with_a_newline() -> None:
     assert render_svg(compile_plate(spec())).endswith("\n")
+
+
+def test_a_window_is_drawn_on_the_path_the_cutter_takes() -> None:
+    window = Feature.rectangle("meter", Point(30.0, 10.0), 12.0, 6.0)
+    text = render_svg(compile_plate(spec(features=(window,))))
+    assert "#308030" in text
+
+
+def test_the_milling_path_is_drawn_inside_the_window() -> None:
+    window = Feature.rectangle("meter", Point(30.0, 10.0), 12.0, 6.0)
+    root = parsed(render_svg(compile_plate(spec(features=(window,)))))
+    milled = [
+        line
+        for line in root.iter("{http://www.w3.org/2000/svg}polyline")
+        if line.get("stroke") == "#308030"
+    ]
+    assert milled
+    xs = [float(pair.split(",")[0]) for pair in str(milled[0].get("points")).split()]
+    assert min(xs) > 24.0
+
+
+def test_the_milling_is_drawn_once_and_not_once_a_pass() -> None:
+    window = Feature.rectangle("meter", Point(30.0, 10.0), 12.0, 6.0)
+    root = parsed(render_svg(compile_plate(spec(features=(window,)))))
+    milled = [
+        line
+        for line in root.iter("{http://www.w3.org/2000/svg}polyline")
+        if line.get("stroke") == "#308030"
+    ]
+    assert len(milled) == 1
+
+
+def test_a_plate_with_no_windows_draws_no_milling() -> None:
+    assert "#308030" not in render_svg(compile_plate(spec()))
+
+
+def test_the_milling_can_be_left_off_with_the_features() -> None:
+    window = Feature.rectangle("meter", Point(30.0, 10.0), 12.0, 6.0)
+    text = render_svg(compile_plate(spec(features=(window,))), show_features=False)
+    assert "#308030" not in text

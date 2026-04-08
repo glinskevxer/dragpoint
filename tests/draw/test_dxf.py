@@ -125,14 +125,75 @@ def test_a_round_feature_comes_out_as_a_circle() -> None:
     assert ("40", "2.0000") in pairs(text)
 
 
-def test_a_rectangular_feature_comes_out_as_a_polyline() -> None:
+def test_a_rectangular_feature_comes_out_as_a_polyline_and_its_milling() -> None:
     window = Feature.rectangle("meter", Point(10.0, 10.0), 6.0, 4.0)
     with_it = render_dxf(compile_plate(spec(features=(window,))))
     without = render_dxf(compile_plate(spec()))
     assert ("0", "CIRCLE") not in pairs(with_it)
     opens = sum(1 for group, value in pairs(with_it) if group == "0" and value == "POLYLINE")
     before = sum(1 for group, value in pairs(without) if group == "0" and value == "POLYLINE")
-    assert opens == before + 1
+    assert opens == before + 2
+
+
+def test_a_window_carries_the_path_the_cutter_will_take() -> None:
+    window = Feature.rectangle("meter", Point(10.0, 10.0), 6.0, 4.0)
+    text = render_dxf(compile_plate(spec(features=(window,))))
+    assert any(group == "8" and value == "MILL" for group, value in pairs(text))
+
+
+def test_the_milling_path_is_inside_the_window_it_cuts() -> None:
+    window = Feature.rectangle("meter", Point(10.0, 10.0), 6.0, 4.0)
+    text = render_dxf(compile_plate(spec(features=(window,))))
+    on_mill = _layer_points(text, "MILL")
+    assert on_mill
+    assert min(x for x, _ in on_mill) > 7.0
+
+
+def test_a_plate_with_no_windows_has_nothing_on_the_mill_layer() -> None:
+    text = render_dxf(compile_plate(spec()))
+    assert not any(group == "8" and value == "MILL" for group, value in pairs(text))
+
+
+def test_a_hole_gets_a_centre_cross() -> None:
+    hole = Feature.round_hole("fix", Point(10.0, 10.0), 4.0)
+    text = render_dxf(compile_plate(spec(features=(hole,))))
+    assert any(group == "8" and value == "DRILL" for group, value in pairs(text))
+
+
+def test_the_cross_is_centred_on_the_hole() -> None:
+    hole = Feature.round_hole("fix", Point(10.0, 10.0), 4.0)
+    text = render_dxf(compile_plate(spec(features=(hole,))))
+    on_drill = _layer_points(text, "DRILL")
+    assert (10.0, 10.0) not in on_drill
+    assert min(x for x, _ in on_drill) < 10.0 < max(x for x, _ in on_drill)
+
+
+def test_a_plate_with_no_holes_has_nothing_on_the_drill_layer() -> None:
+    text = render_dxf(compile_plate(spec()))
+    assert not any(group == "8" and value == "DRILL" for group, value in pairs(text))
+
+
+def _layer_points(text: str, layer: str) -> list[tuple[float, float]]:
+    """Every vertex of every entity on one layer.
+
+    Only vertices. A polyline header carries a dummy point of its own that
+    is not part of the shape, and counting it puts the origin in the middle
+    of every measurement.
+    """
+    found: list[tuple[float, float]] = []
+    entity = ""
+    here = ""
+    x: float | None = None
+    for group, value in pairs(text):
+        if group == "0":
+            entity = value
+        elif group == "8":
+            here = value
+        elif group == "10":
+            x = float(value)
+        elif group == "20" and entity == "VERTEX" and here == layer and x is not None:
+            found.append((x, float(value)))
+    return found
 
 
 def test_a_border_gets_its_own_layer() -> None:
