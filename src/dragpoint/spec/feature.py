@@ -14,6 +14,7 @@ the reading a fitter would use with a rule.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -24,7 +25,7 @@ from dragpoint.geometry.point import Point
 from dragpoint.geometry.stroke import Stroke
 from dragpoint.units import QUANTUM
 
-__all__ = ["Feature", "FeatureKind"]
+__all__ = ["Feature", "FeatureKind", "milled_features"]
 
 
 class FeatureKind(StrEnum):
@@ -190,3 +191,12 @@ class Feature:
     def __str__(self) -> str:
         shape = f"{self.width:g}mm dia" if self.is_round else f"{self.width:g} by {self.height:g}mm"
         return f"{self.name} ({self.kind}, {shape} at {self.centre})"
+
+
+def milled_features(features: Iterable[Feature]) -> tuple[Feature, ...]:
+    """The features a profile cutter goes round, in the order they came.
+
+    A rectangular cutout is milled. A hole is drilled, a bore is bored, and
+    a keepout is not a thing at all, so none of those are here.
+    """
+    return tuple(item for item in features if item.kind is FeatureKind.CUTOUT and not item.is_round)

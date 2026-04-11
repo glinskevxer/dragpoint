@@ -21,6 +21,10 @@ it was asked for, with the failure written down beside it.
 | `stroke-self-merge` | error | a stroke comes back on itself closer than the groove it cuts |
 | `stroke-stub` | warning | a stroke too short to be anything but a dimple |
 | `letter-weight` | warning | the groove is too wide for the size of the lettering |
+| `window-narrower-than-the-cutter` | error | a window smaller than the cutter that has to go round it |
+| `window-rail-too-thin` | warning | a window that leaves too little blank between it and the edge |
+| `windows-too-close-together` | warning | two windows with a whisker of blank between them |
+| `window-over-the-lettering` | error | a window that would mill away what has just been engraved |
 | `depth-window` | error | the depth has to be one the stock will take |
 | `cutter-reach` | error | the cutter has to reach the depth asked for |
 | `pass-count` | warning | a cut that needs a lot of passes is worth a second look |

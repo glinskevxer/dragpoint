@@ -26,7 +26,15 @@ from dataclasses import dataclass
 from dragpoint.errors import OutOfRange
 from dragpoint.units import QUANTUM
 
-__all__ = ["CATALOGUE", "Cutter", "catalogue_cutter"]
+__all__ = ["CATALOGUE", "DEFAULT_PROFILE_CUTTER", "Cutter", "catalogue_cutter"]
+
+DEFAULT_PROFILE_CUTTER = "P-020"
+"""The parallel cutter this shop profiles windows and cutouts with.
+
+Here rather than with the milling because two layers need it and neither is
+above the other: the rule that asks whether a window can be cut at all runs
+long before anything works out how to cut it.
+"""
 
 
 @dataclass(frozen=True, slots=True)

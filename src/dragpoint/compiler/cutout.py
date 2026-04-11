@@ -40,9 +40,9 @@ from dragpoint.geometry.box import Box
 from dragpoint.geometry.stroke import Stroke
 from dragpoint.path.cut import Cut, CutList
 from dragpoint.path.plan import Toolpath, build_toolpath
-from dragpoint.spec.feature import Feature, FeatureKind
+from dragpoint.spec.feature import Feature, milled_features
 from dragpoint.spec.plate import PlateSpec
-from dragpoint.tool.cutter import Cutter, catalogue_cutter
+from dragpoint.tool.cutter import DEFAULT_PROFILE_CUTTER, Cutter, catalogue_cutter
 from dragpoint.tool.material import Material, material
 from dragpoint.units import QUANTUM
 
@@ -56,9 +56,6 @@ __all__ = [
     "window_path",
 ]
 
-DEFAULT_CUTOUT_CUTTER = "P-020"
-"""The parallel cutter this shop profiles windows with."""
-
 DEFAULT_TAB_WIDTH = 2.0
 """Millimetres of each tab, which is what a screwdriver snaps without a mark."""
 
@@ -71,9 +68,7 @@ BREAKTHROUGH = 0.3
 
 def cuttable(spec: PlateSpec) -> tuple[Feature, ...]:
     """The features on a plate that get milled out, in schedule order."""
-    return tuple(
-        item for item in spec.features if item.kind is FeatureKind.CUTOUT and not item.is_round
-    )
+    return milled_features(spec.features)
 
 
 def window_path(window: Feature, radius: float) -> Stroke:
@@ -156,7 +151,7 @@ def cutout_plate(
         raise OutOfRange("tab height", tab_height, 0.0, math.inf)
     machine = setup or MachineSetup()
     sheet = stock if stock is not None else material(spec.stock)
-    tool = cutter if cutter is not None else catalogue_cutter(DEFAULT_CUTOUT_CUTTER)
+    tool = cutter if cutter is not None else catalogue_cutter(DEFAULT_PROFILE_CUTTER)
     windows = cuttable(spec)
     depth = sheet.thickness + BREAKTHROUGH
     steps = max(1, math.ceil(depth / sheet.max_depth_per_pass - QUANTUM))
