@@ -269,3 +269,45 @@ def test_a_severity_that_is_not_a_table_is_refused() -> None:
     text = MINIMAL.replace('name = "J1"', 'name = "J1"\n\n[job.rules]\nseverity = "loud"')
     with pytest.raises(SpecError, match="a table of rule names"):
         parse_job(text)
+
+
+FRACTION_JOB = """
+[job]
+name = "IMPERIAL"
+
+[[plate]]
+name = "P-1"
+size = ["3in", "1 1/2in"]
+stock = "LAM16-BW"
+lines = ["METER"]
+cap_height = "1/8in"
+
+  [[plate.feature]]
+  name = "bore"
+  kind = "bore"
+  at = ["1 1/2in", "3/4in"]
+  diameter = "7/8in"
+"""
+"""A schedule written the way a customer drawing writes sizes."""
+
+
+def test_a_plate_size_can_be_a_fraction(tmp_path: Path) -> None:
+    target = tmp_path / "imperial.toml"
+    target.write_text(FRACTION_JOB, encoding="utf-8")
+    plate = load_job(target).plates[0]
+    assert plate.width == pytest.approx(76.2)
+    assert plate.height == pytest.approx(38.1)
+
+
+def test_a_lettering_height_can_be_a_fraction(tmp_path: Path) -> None:
+    target = tmp_path / "imperial.toml"
+    target.write_text(FRACTION_JOB, encoding="utf-8")
+    assert load_job(target).plates[0].cap_height == pytest.approx(3.175)
+
+
+def test_a_bore_can_be_a_fraction(tmp_path: Path) -> None:
+    target = tmp_path / "imperial.toml"
+    target.write_text(FRACTION_JOB, encoding="utf-8")
+    bore = load_job(target).plates[0].features[0]
+    assert bore.width == pytest.approx(22.225)
+    assert bore.centre.x == pytest.approx(38.1)

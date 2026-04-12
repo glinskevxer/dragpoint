@@ -126,3 +126,50 @@ def test_require_range_returns_the_value_it_accepted() -> None:
     with pytest.raises(OutOfRange) as caught:
         require_range("depth", 1.5, 0.0, 1.0)
     assert "depth is 1.5" in str(caught.value)
+
+
+def test_a_simple_fraction_of_an_inch_reads() -> None:
+    assert parse_length("7/8in") == pytest.approx(22.225)
+
+
+def test_a_whole_number_and_a_fraction_read_together() -> None:
+    assert parse_length("1 1/2in") == pytest.approx(38.1)
+
+
+def test_a_fraction_with_no_unit_takes_the_default() -> None:
+    assert parse_length("3/8") == pytest.approx(0.375)
+    assert parse_length("3/8", default_unit="in") == pytest.approx(9.525)
+
+
+def test_a_negative_fraction_reads() -> None:
+    assert parse_length("-1 1/4in") == pytest.approx(-31.75)
+
+
+def test_space_round_the_slash_is_allowed() -> None:
+    assert parse_length("7 / 8 in") == pytest.approx(22.225)
+
+
+def test_a_fraction_in_quote_marks_is_inches() -> None:
+    assert parse_length('7/8"') == pytest.approx(22.225)
+
+
+def test_no_space_means_the_numerator_is_the_whole_number() -> None:
+    assert parse_length("11/2in") == pytest.approx(139.7)
+
+
+def test_a_fraction_over_nothing_is_a_message() -> None:
+    with pytest.raises(BadLength, match="over nothing"):
+        parse_length("1/0in")
+
+
+def test_a_fraction_in_a_unit_nobody_knows_is_a_message() -> None:
+    with pytest.raises(BadUnit):
+        parse_length("1/2furlong")
+
+
+def test_a_decimal_still_reads_the_way_it_always_did() -> None:
+    assert parse_length("0.875in") == pytest.approx(22.225)
+
+
+def test_a_fraction_reads_the_same_as_its_decimal() -> None:
+    assert parse_length("7/8in") == pytest.approx(parse_length("0.875in"))

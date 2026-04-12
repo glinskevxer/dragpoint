@@ -11,6 +11,11 @@ The quantum is deliberate. A rotary engraver positions to about a micron on a
 good day and the post processors round to four decimal places of a
 millimetre, so two lengths that differ by less than :data:`QUANTUM` are the
 same length as far as this package is concerned.
+
+Fractions are read too, because customer drawings are full of them. A bore
+comes over as 7/8in and a plate as 1 1/2 x 3in, and retyping those as
+decimals is a transcription step nobody should be doing by hand: 0.875 is
+one keystroke away from 0.075, and both look like a number.
 """
 
 from __future__ import annotations
@@ -60,6 +65,23 @@ _LENGTH_RE = re.compile(
     re.VERBOSE,
 )
 
+_FRACTION_RE = re.compile(
+    r"""^\s*
+    (?P<sign>[+-]?)
+    (?:(?P<whole>\d+)\s+)?
+    (?P<numerator>\d+)\s*/\s*(?P<denominator>\d+)
+    \s*
+    (?P<unit>[a-zA-Z"']*)
+    \s*$""",
+    re.VERBOSE,
+)
+"""A fraction, with an optional whole number in front of it.
+
+``1 1/2in`` and ``7/8in`` and a bare ``3/8``. The space between the whole
+number and the fraction is required, because ``11/2`` is eleven halves on
+every drawing anybody has ever sent us.
+"""
+
 _ALIASES = {
     '"': "in",
     "''": "in",
@@ -82,6 +104,9 @@ def parse_length(text: str | float | int, *, default_unit: str = "mm") -> float:
         if isinstance(text, bool):
             raise BadLength(repr(text), "a boolean is not a length")
         return to_unit_factor(default_unit) * float(text)
+    fraction = _FRACTION_RE.match(text)
+    if fraction is not None:
+        return _fraction_length(text, fraction, default_unit)
     match = _LENGTH_RE.match(text)
     if match is None:
         raise BadLength(text, "expected a number with an optional unit suffix")
@@ -94,6 +119,18 @@ def parse_length(text: str | float | int, *, default_unit: str = "mm") -> float:
         raise BadLength(text, "not a finite number")
     unit = match.group("unit") or default_unit
     return value * to_unit_factor(unit)
+
+
+def _fraction_length(text: str, found: re.Match[str], default_unit: str) -> float:
+    """A matched fraction turned into millimetres."""
+    denominator = int(found.group("denominator"))
+    if denominator == 0:
+        raise BadLength(text, "a fraction over nothing is not a length")
+    whole = int(found.group("whole") or 0)
+    value = whole + int(found.group("numerator")) / denominator
+    if found.group("sign") == "-":
+        value = -value
+    return value * to_unit_factor(found.group("unit") or default_unit)
 
 
 def to_unit_factor(unit: str) -> float:
