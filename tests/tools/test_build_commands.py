@@ -22,16 +22,24 @@ def test_the_page_is_up_to_date(capsys: pytest.CaptureFixture[str]) -> None:
 def test_every_command_that_exists_is_on_the_page() -> None:
     text = page()
     assert isinstance(root, click.Group)
-    for group_name, group in root.commands.items():
-        assert isinstance(group, click.Group)
-        for command_name in group.commands:
-            assert f"dragpoint {group_name} {command_name}" in text
+    for name, entry in root.commands.items():
+        if not isinstance(entry, click.Group):
+            assert f"dragpoint {name}" in text
+            continue
+        for command_name in entry.commands:
+            assert f"dragpoint {name} {command_name}" in text
 
 
 def test_every_group_gets_a_heading() -> None:
     text = page()
-    for group_name in root.commands:
-        assert f"## `dragpoint {group_name}`" in text
+    for name in root.commands:
+        assert f"## `dragpoint {name}`" in text
+
+
+def test_a_command_hung_off_the_root_gets_its_own_section() -> None:
+    text = page()
+    assert "## `dragpoint pack`" in text
+    assert "### `dragpoint pack SCHEDULE`" in text
 
 
 def test_the_help_option_is_not_worth_a_row() -> None:

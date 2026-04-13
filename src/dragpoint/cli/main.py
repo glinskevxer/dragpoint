@@ -15,6 +15,7 @@ from dragpoint import __version__
 from dragpoint.cli.crib import crib
 from dragpoint.cli.font import font
 from dragpoint.cli.job import job
+from dragpoint.cli.pack import pack
 from dragpoint.cli.plate import plate
 
 __all__ = ["main"]
@@ -33,6 +34,7 @@ main.add_command(font)
 main.add_command(plate)
 main.add_command(job)
 main.add_command(crib)
+main.add_command(pack)
 
 
 if __name__ == "__main__":  # pragma: no cover

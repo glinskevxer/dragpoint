@@ -175,6 +175,20 @@ Estimate how long a whole job takes.
 | --- | --- | --- |
 | `--block-time` | Seconds a move costs. | `0.004` |
 
+## `dragpoint pack`
+
+Write every file a job needs, in one folder, in one go.
+
+### `dragpoint pack SCHEDULE`
+
+Write every file a job needs, in one folder, in one go.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--out` | Directory to write the whole pack into. |  |
+| `--force` | Write the pack even if the rules found an error. |  |
+| `--no-drawings` | Leave the plate previews out. |  |
+
 ## `dragpoint plate`
 
 Compile one plate.

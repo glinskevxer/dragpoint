@@ -68,18 +68,31 @@ def _body() -> list[str]:
         "command could not be carried out at all.",
     ]
     assert isinstance(root, click.Group)
-    for group_name in sorted(root.commands):
-        group = root.commands[group_name]
-        assert isinstance(group, click.Group)
-        lines.extend(["", f"## `dragpoint {group_name}`", "", _summary(group)])
-        for command_name in sorted(group.commands):
-            command = group.commands[command_name]
-            usage = f"dragpoint {group_name} {command_name} {_arguments(command)}".strip()
-            lines.extend(["", f"### `{usage}`", "", _summary(command)])
-            rows = _options(command)
-            if rows:
-                lines.extend(["", "| option | what it does | default |", "| --- | --- | --- |"])
-                lines.extend(rows)
+    for name in sorted(root.commands):
+        entry = root.commands[name]
+        if isinstance(entry, click.Group):
+            lines.extend(["", f"## `dragpoint {name}`", "", _summary(entry)])
+            for command_name in sorted(entry.commands):
+                lines.extend(_command(entry.commands[command_name], f"{name} {command_name}"))
+            continue
+        lines.extend(["", f"## `dragpoint {name}`", "", _summary(entry)])
+        lines.extend(_command(entry, name, heading="###"))
+    return lines
+
+
+def _command(command: click.Command, path: str, heading: str = "###") -> list[str]:
+    """One command: its usage line, what it is for, and its options.
+
+    A command hung straight off the root gets the same treatment as one
+    inside a group. There is only one of those and it is the one most
+    people run, so it is not a special case worth a second code path.
+    """
+    usage = f"dragpoint {path} {_arguments(command)}".strip()
+    lines = ["", f"{heading} `{usage}`", "", _summary(command)]
+    rows = _options(command)
+    if rows:
+        lines.extend(["", "| option | what it does | default |", "| --- | --- | --- |"])
+        lines.extend(rows)
     return lines
 
 
