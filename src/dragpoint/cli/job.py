@@ -27,6 +27,7 @@ from dragpoint.compiler.plate import rule_selection
 from dragpoint.compiler.settings import MachineSetup
 from dragpoint.draw.sheet import render_nest
 from dragpoint.estimate.cycle import estimate_job
+from dragpoint.estimate.setups import job_work
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
 from dragpoint.report.setup import setup_sheet
@@ -154,6 +155,11 @@ def time_job(schedule: Path, block_time: float) -> None:
     for name, quantity, time in estimate.per_plate:
         click.echo(f"{name:<10} x{quantity:<4} {time}")
     click.echo(str(estimate))
+    work, shop = job_work(made, block_time=block_time)
+    for item in work:
+        if item.setups > 1:
+            click.echo(f"  {item}")
+    click.echo(f"{shop / 60.0:.1f} minutes across every setup, tool changes counted")
 
 
 @job.command("nest")

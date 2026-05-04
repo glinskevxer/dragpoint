@@ -5,5 +5,14 @@ could alter the job it was estimating would be a quote that moved.
 """
 
 from dragpoint.estimate.cycle import CycleTime, JobTime, estimate_job, estimate_plate
+from dragpoint.estimate.setups import PlateWork, job_work, plate_work
 
-__all__ = ["CycleTime", "JobTime", "estimate_job", "estimate_plate"]
+__all__ = [
+    "CycleTime",
+    "JobTime",
+    "PlateWork",
+    "estimate_job",
+    "estimate_plate",
+    "job_work",
+    "plate_work",
+]

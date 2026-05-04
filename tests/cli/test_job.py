@@ -465,3 +465,17 @@ def test_the_setup_sheet_of_a_job_with_no_windows_says_nothing_about_them(
     result = run(runner, "job", "sheet", str(EXAMPLE))
     assert result.exit_code == 0
     assert "tabs a window" not in result.output
+
+
+def test_the_time_command_adds_the_other_setups_up(runner: CliRunner) -> None:
+    result = run(runner, "job", "time", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "across every setup" in result.output
+
+
+def test_the_time_command_names_the_plates_that_need_more_than_one_setup(
+    runner: CliRunner,
+) -> None:
+    result = run(runner, "job", "time", str(EXAMPLE))
+    assert "setups" in result.output
+    assert "P-120" in result.output
