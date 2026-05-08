@@ -8,6 +8,13 @@ are the same for every plate cut in that setup.
 Feeds are the exception and they are not here. A feed rate belongs to the
 material, comes off the stock table, and changes with the plate rather than
 with the machine.
+
+``simplify`` is a machine setting for the same reason. How finely a run has
+to be described is a property of the control reading it: the old machine has
+eight thousand blocks of memory and a legend bent round an arc will not fit
+in it, and the new one would take a hundred times that. It is off unless
+somebody asks, because dropping points is a decision and the default should
+not make decisions.
 """
 
 from __future__ import annotations
@@ -37,6 +44,7 @@ class MachineSetup:
     clearance: float = 0.5
     hop_limit: float = 25.0
     ramp: float = 0.0
+    simplify: float = 0.0
     pass_order: PassOrder = PassOrder.BY_PASS
     allow_reverse: bool = True
     optimise_rounds: int = 2
@@ -53,6 +61,8 @@ class MachineSetup:
             raise OutOfRange("hop limit", self.hop_limit, 0.0, math.inf)
         if self.ramp < 0.0:
             raise OutOfRange("ramp", self.ramp, 0.0, math.inf)
+        if self.simplify < 0.0:
+            raise OutOfRange("simplify", self.simplify, 0.0, math.inf)
         if self.optimise_rounds < 0:
             raise OutOfRange("optimise rounds", self.optimise_rounds, 0, math.inf)
         if self.rapid_rate <= 0.0:
@@ -86,6 +96,8 @@ class MachineSetup:
             parts.append("no reversing")
         if self.ramp:
             parts.append(f"ramp {self.ramp:g}mm")
+        if self.simplify:
+            parts.append(f"simplify {self.simplify:g}mm")
         if self.spring_pass:
             parts.append("spring pass")
         return ", ".join(parts)

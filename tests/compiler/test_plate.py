@@ -8,6 +8,7 @@ import pytest
 
 from dragpoint.compiler.plate import compile_plate
 from dragpoint.compiler.settings import MachineSetup
+from dragpoint.errors import OutOfRange
 from dragpoint.geometry.point import Point
 from dragpoint.path.cut import PassOrder
 from dragpoint.rules.check import RuleSelection
@@ -454,3 +455,57 @@ def test_a_left_aligned_legend_leaves_the_same_room() -> None:
     box = made.text.ink_bounds()
     assert box is not None
     assert box.min_x - made.spec.area().min_x >= made.passes.groove_width / 2.0 - 1e-9
+
+
+def test_nothing_is_dropped_by_default() -> None:
+    plain = compile_plate(plate_spec(lines=("PUMP HOUSE",), arc_radius=60.0, width=100.0))
+    points = sum(len(run.points) for run in plain.runs)
+    assert points == sum(len(stroke.points) for stroke in plain.runs)
+
+
+def test_a_tolerance_drops_points_off_a_bent_legend() -> None:
+    spec = plate_spec(lines=("PUMP HOUSE",), arc_radius=60.0, width=100.0, cap_height=5.0)
+    plain = compile_plate(spec)
+    simple = compile_plate(spec, setup=MachineSetup(simplify=0.05))
+    assert sum(len(run.points) for run in simple.runs) < sum(len(run.points) for run in plain.runs)
+
+
+def test_a_bigger_tolerance_drops_more() -> None:
+    spec = plate_spec(lines=("PUMP HOUSE",), arc_radius=60.0, width=100.0, cap_height=5.0)
+    fine = compile_plate(spec, setup=MachineSetup(simplify=0.01))
+    coarse = compile_plate(spec, setup=MachineSetup(simplify=0.2))
+    assert sum(len(run.points) for run in coarse.runs) < sum(len(run.points) for run in fine.runs)
+
+
+def test_simplifying_keeps_the_ends_where_they_were() -> None:
+    spec = plate_spec(lines=("PUMP HOUSE",), arc_radius=60.0, width=100.0, cap_height=5.0)
+    plain = compile_plate(spec)
+    simple = compile_plate(spec, setup=MachineSetup(simplify=0.05))
+    assert len(simple.runs) == len(plain.runs)
+    for before, after in zip(plain.runs, simple.runs, strict=True):
+        assert after.start == before.start
+        assert after.end == before.end
+
+
+def test_a_straight_legend_has_nothing_to_drop() -> None:
+    spec = plate_spec(lines=("RUN",))
+    plain = compile_plate(spec)
+    simple = compile_plate(spec, setup=MachineSetup(simplify=0.05))
+    assert sum(len(run.points) for run in simple.runs) == sum(len(run.points) for run in plain.runs)
+
+
+def test_the_toolpath_gets_shorter_to_write_as_well() -> None:
+    spec = plate_spec(lines=("PUMP HOUSE",), arc_radius=60.0, width=100.0, cap_height=5.0)
+    plain = compile_plate(spec)
+    simple = compile_plate(spec, setup=MachineSetup(simplify=0.05))
+    assert len(simple.toolpath) < len(plain.toolpath)
+
+
+def test_a_negative_tolerance_is_refused() -> None:
+    with pytest.raises(OutOfRange, match="simplify"):
+        MachineSetup(simplify=-1.0)
+
+
+def test_the_setting_says_so_when_it_is_on() -> None:
+    assert "simplify 0.05mm" in str(MachineSetup(simplify=0.05))
+    assert "simplify" not in str(MachineSetup())

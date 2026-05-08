@@ -222,6 +222,7 @@ Compile a plate and print what the rules say about it.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--simplify` | Drop points this far off the line. | `0mm` |
 | `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -260,6 +261,7 @@ Post the window milling for one plate as a program of its own.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--simplify` | Drop points this far off the line. | `0mm` |
 | `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -301,6 +303,7 @@ Draw one plate as an SVG preview or a DXF.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--simplify` | Drop points this far off the line. | `0mm` |
 | `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -341,6 +344,7 @@ Post the drilling for one plate as a program of its own.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--simplify` | Drop points this far off the line. | `0mm` |
 | `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -380,6 +384,7 @@ Post one plate to a machine program.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--simplify` | Drop points this far off the line. | `0mm` |
 | `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |
@@ -424,6 +429,7 @@ Estimate how long one plate takes.
 | `--arc-clockwise` | Run the legend the other way. |  |
 | `--arc-inward` | Letters face the middle. |  |
 | `--safe` | Full retract height. | `5mm` |
+| `--simplify` | Drop points this far off the line. | `0mm` |
 | `--ramp` | Lead in to depth. | `0mm` |
 | `--clearance` | Hop height. | `0.5mm` |
 | `--hop` | Lift high above this move. | `25mm` |

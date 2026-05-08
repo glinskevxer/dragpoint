@@ -197,6 +197,23 @@ def _lay_out(
     )
 
 
+def _simplified(runs: tuple[Stroke, ...], tolerance: float) -> tuple[Stroke, ...]:
+    """The runs with the points a cutter could not tell apart taken out.
+
+    After joining rather than before. A point in the middle of a run is only
+    droppable once the run it is in the middle of exists, and a glyph that
+    arrives as six strokes has six ends that are not droppable at all until
+    they stop being ends.
+
+    The rules see the result, which is the point. A run simplified to within
+    a hundredth of a millimetre is what the machine will cut, so it is what
+    the separation rule has to measure.
+    """
+    if tolerance <= 0.0:
+        return runs
+    return tuple(run.simplified(tolerance) for run in runs)
+
+
 def _text_strokes(spec: PlateSpec, text: LaidOutText) -> tuple[Stroke, ...]:
     """The lettering, bent round the arc when the plate asks for one."""
     arc = spec.arc()
@@ -243,7 +260,7 @@ def compile_plate(
     lettering = _text_strokes(spec, text)
 
     drawn = lettering + tuple(_border_strokes(spec))
-    runs = tuple(join_runs(list(drawn)))
+    runs = _simplified(tuple(join_runs(list(drawn))), machine.simplify)
     passes = plan_passes(depth, stock, cutter, spring_pass=owner.spring_pass)
 
     # The travel order is decided over the runs, once, before the passes are

@@ -38,6 +38,7 @@ def defaults(**overrides: Any) -> dict[str, Any]:
         "clearance": "0.5mm",
         "hop": "25mm",
         "ramp": "0mm",
+        "simplify": "0mm",
         "no_optimise": False,
         "pass_order": "by-pass",
         "rapid_rate": 6000.0,
@@ -127,6 +128,7 @@ def test_the_setup_defaults_match_the_machine() -> None:
     assert setup.clearance == 0.5
     assert setup.hop_limit == 25.0
     assert setup.ramp == 0.0
+    assert setup.simplify == 0.0
     assert setup.pass_order is PassOrder.BY_PASS
     assert setup.optimises
     assert setup.origin == Point(0.0, 0.0)
