@@ -56,7 +56,7 @@ Write a face back out in canonical .strk form.
 
 ### `dragpoint font list`
 
-List the faces that ship with dragpoint.
+List the faces this installation can find.
 
 ### `dragpoint font measure [TEXT...]`
 

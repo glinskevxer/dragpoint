@@ -13,7 +13,7 @@ import click
 
 from dragpoint.cli.common import echo_json, handled, write_out
 from dragpoint.draw.specimen import render_specimen
-from dragpoint.font.library import load_face, shipped_names
+from dragpoint.font.library import load_face, local_names, shipped_names
 from dragpoint.font.write import write_face
 from dragpoint.text.fit import FitPolicy, fit_lines, measure_lines
 from dragpoint.text.style import TextStyle
@@ -29,12 +29,19 @@ def font() -> None:
 
 @font.command("list")
 def list_faces() -> None:
-    """List the faces that ship with dragpoint."""
-    for name in shipped_names():
+    """List the faces this installation can find.
+
+    The shipped ones and anything on the face search path, which is where a
+    shop keeps its own. A local face with the name of a shipped one is
+    listed once, as the local one, because that is the one that loads.
+    """
+    local = local_names()
+    for name in sorted(set(local) | set(shipped_names())):
         face = load_face(name)
+        where = "local" if name in local else "shipped"
         click.echo(
             f"{name:<16} {len(face):>4} glyphs  "
-            f"{face.metrics.units_per_em} upem  cap {face.metrics.cap_height}"
+            f"{face.metrics.units_per_em} upem  cap {face.metrics.cap_height}  {where}"
         )
 
 

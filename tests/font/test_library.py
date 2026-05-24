@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
 from dragpoint.errors import FaceNotFound
 from dragpoint.font.library import (
+    FACE_PATH_VARIABLE,
+    face_path,
     load_face,
     load_face_file,
+    local_names,
     shipped_face,
     shipped_names,
 )
@@ -189,3 +193,90 @@ def test_the_mark_sits_above_the_capital_line() -> None:
 def test_the_marks_themselves_take_up_no_room_on_the_line() -> None:
     face = shipped_face("panelgothic")
     assert face.glyph("acutecomb").advance == 0
+
+
+HOUSE_FACE = "face housecut\nupem 100\ncap 70\nxheight 50\nascender 70\ndescender 0\n"
+
+
+def shop_faces(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *names: str) -> Path:
+    """A directory of shop faces, on the search path."""
+    (tmp_path / "faces").mkdir(exist_ok=True)
+    for name in names:
+        (tmp_path / "faces" / f"{name}.strk").write_text(
+            HOUSE_FACE.replace("housecut", name), encoding="utf-8"
+        )
+    monkeypatch.setenv(FACE_PATH_VARIABLE, str(tmp_path / "faces"))
+    return tmp_path / "faces"
+
+
+def test_with_nothing_set_there_is_no_search_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(FACE_PATH_VARIABLE, raising=False)
+    assert face_path() == ()
+    assert local_names() == ()
+
+
+def test_the_search_path_comes_out_of_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    where = shop_faces(tmp_path, monkeypatch, "housecut")
+    assert face_path() == (where,)
+
+
+def test_a_face_on_the_search_path_is_found_by_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shop_faces(tmp_path, monkeypatch, "housecut")
+    assert load_face("housecut").name == "housecut"
+
+
+def test_the_faces_on_the_path_are_listed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    shop_faces(tmp_path, monkeypatch, "housecut", "dialcut")
+    assert local_names() == ("dialcut", "housecut")
+
+
+def test_two_directories_are_both_searched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    first = tmp_path / "one"
+    second = tmp_path / "two"
+    for where, name in ((first, "onecut"), (second, "twocut")):
+        where.mkdir()
+        (where / f"{name}.strk").write_text(HOUSE_FACE.replace("housecut", name), encoding="utf-8")
+    monkeypatch.setenv(FACE_PATH_VARIABLE, os.pathsep.join([str(first), str(second)]))
+    assert local_names() == ("onecut", "twocut")
+    assert load_face("twocut").name == "twocut"
+
+
+def test_an_empty_entry_is_not_the_working_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(FACE_PATH_VARIABLE, os.pathsep)
+    assert face_path() == ()
+
+
+def test_a_directory_that_is_not_there_is_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(FACE_PATH_VARIABLE, str(tmp_path / "gone"))
+    assert local_names() == ()
+
+
+def test_a_shop_face_wins_over_a_shipped_one_of_the_same_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shop_faces(tmp_path, monkeypatch, "panelgothic")
+    assert load_face("panelgothic").metrics.units_per_em == 100
+
+
+def test_a_face_next_to_the_spec_still_wins_over_the_search_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shop_faces(tmp_path, monkeypatch, "housecut")
+    beside = tmp_path / "job"
+    beside.mkdir()
+    (beside / "housecut.strk").write_text(
+        HOUSE_FACE.replace("housecut", "beside"), encoding="utf-8"
+    )
+    assert load_face("housecut", search=beside).name == "beside"
+
+
+def test_a_name_nobody_has_anywhere_is_still_a_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(FACE_PATH_VARIABLE, raising=False)
+    with pytest.raises(FaceNotFound):
+        load_face("nosuchface")

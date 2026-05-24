@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from dragpoint.font.library import shipped_names
@@ -158,3 +159,35 @@ def test_specimen_can_leave_the_boxes_off(runner: CliRunner) -> None:
     result = run(runner, "font", "specimen", "dialface", "--no-grid")
     assert result.exit_code == 0
     assert "<rect" not in result.output
+
+
+def test_the_list_says_which_faces_ship(runner: CliRunner) -> None:
+    result = run(runner, "font", "list")
+    assert result.exit_code == 0
+    assert all(line.endswith("shipped") for line in lines(result))
+
+
+def test_a_shop_face_is_listed_as_local(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "housecut.strk").write_text(
+        "face housecut\nupem 100\ncap 70\nxheight 50\nascender 70\ndescender 0\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DRAGPOINT_FACES", str(tmp_path))
+    result = run(runner, "font", "list")
+    assert result.exit_code == 0
+    assert any("housecut" in line and line.endswith("local") for line in lines(result))
+
+
+def test_a_shop_face_can_be_shown_by_name(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "housecut.strk").write_text(
+        "face housecut\nupem 100\ncap 70\nxheight 50\nascender 70\ndescender 0\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DRAGPOINT_FACES", str(tmp_path))
+    result = run(runner, "font", "show", "housecut")
+    assert result.exit_code == 0
+    assert "housecut" in result.output
