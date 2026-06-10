@@ -37,6 +37,7 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]" -c constraints.txt
       - run: python -m dragpoint.tools.check_docstrings
+      - run: python -m dragpoint.tools.check_examples
       - run: python -m dragpoint.tools.check_layers
       - run: python -m dragpoint.tools.check_naming
       - run: python -m dragpoint.tools.check_tests

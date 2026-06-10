@@ -36,11 +36,32 @@ def test_every_document_a_release_ships_is_there() -> None:
         assert (DOCS / name).is_file()
 
 
-def test_every_check_is_run_again_here() -> None:
-    modules = {check.__module__ for check in release_check.CHECKS}
-    assert "dragpoint.tools.check_layers" in modules
-    assert "dragpoint.tools.check_face" in modules
-    assert len(release_check.CHECKS) >= 6
+def test_every_check_module_is_found_by_name() -> None:
+    names = release_check.check_names()
+    assert "check_layers" in names
+    assert "check_face" in names
+    assert "check_examples" in names
+    assert len(names) >= 7
+
+
+def test_the_checks_are_found_and_not_listed() -> None:
+    on_disk = sorted(
+        path.stem for path in (ROOT / "src" / "dragpoint" / "tools").glob("check_*.py")
+    )
+    assert list(release_check.check_names()) == on_disk
+
+
+def test_every_check_that_is_found_can_be_run() -> None:
+    for name, entry in release_check.checks():
+        assert callable(entry), name
+
+
+def test_a_check_with_nothing_to_run_is_a_programming_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(release_check, "check_names", lambda: ("support",))
+    with pytest.raises(AttributeError, match="no main"):
+        release_check.checks()
 
 
 def test_every_generator_is_checked_rather_than_written() -> None:

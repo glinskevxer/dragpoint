@@ -8,13 +8,22 @@ every one of them is only found by the customer.
 
 This runs after everything else in CI. It is the job that fails when the
 build is green and the release is still wrong.
+
+The checks it runs are found rather than listed. A list is a thing somebody
+adds a tool without touching, and a check nobody runs is not a check: it is
+a file that passes. So every ``check_`` module in the tools package is
+imported and run, and the one thing this file does hold a list of is the
+tools that are not checks, which is short and changes for reasons somebody
+would notice.
 """
 
 from __future__ import annotations
 
+import pkgutil
 import sys
 import tomllib
 from collections.abc import Callable, Sequence
+from importlib import import_module
 
 from dragpoint import __version__
 from dragpoint.tools import (
@@ -22,27 +31,47 @@ from dragpoint.tools import (
     build_commands,
     build_crib,
     build_rules,
-    check_docstrings,
-    check_face,
-    check_layers,
-    check_naming,
-    check_tests,
-    check_wiring,
     smoke,
 )
 from dragpoint.tools.support import DOCS, ROOT
 
-__all__ = ["main"]
+__all__ = ["check_names", "checks", "main"]
 
-CHECKS: tuple[Callable[[], int], ...] = (
-    check_docstrings.main,
-    check_layers.main,
-    check_naming.main,
-    check_tests.main,
-    check_wiring.main,
-    check_face.main,
-)
-"""Every check, run again here so a release cannot skip one."""
+CHECK_PREFIX = "check_"
+"""What a check module is called. The name is the register."""
+
+
+def check_names() -> tuple[str, ...]:
+    """Every check module in the tools package, sorted.
+
+    Sorted so a failing release reports them in the same order every time,
+    which matters when the thing being compared is two CI logs.
+    """
+    package = import_module("dragpoint.tools")
+    return tuple(
+        sorted(
+            module.name
+            for module in pkgutil.iter_modules(list(package.__path__))
+            if module.name.startswith(CHECK_PREFIX)
+        )
+    )
+
+
+def checks() -> tuple[tuple[str, Callable[[], int]], ...]:
+    """Every check, named, ready to run.
+
+    A module without a ``main`` is a programming error rather than a failed
+    release, so it raises here instead of being skipped quietly.
+    """
+    found: list[tuple[str, Callable[[], int]]] = []
+    for name in check_names():
+        module = import_module(f"dragpoint.tools.{name}")
+        entry = getattr(module, "main", None)
+        if entry is None:
+            raise AttributeError(f"{name} is a check with no main to run")
+        found.append((name, entry))
+    return tuple(found)
+
 
 GENERATORS: tuple[Callable[[Sequence[str] | None], int], ...] = (
     build_architecture.main,
@@ -85,9 +114,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
         if not (DOCS / name).is_file():
             problems.append(f"docs/{name} is missing")
 
-    for check in CHECKS:
+    for name, check in checks():
         if check() != 0:
-            problems.append(f"{check.__module__} failed")
+            problems.append(f"{name} failed")
     for generator in GENERATORS:
         if generator(["--check"]) != 0:
             problems.append(f"{generator.__module__} is out of date")

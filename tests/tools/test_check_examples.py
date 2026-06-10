@@ -83,3 +83,16 @@ def test_a_warning_is_not_a_problem(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert check_examples.check_example(warned) == []
+
+
+def test_the_check_is_wired_into_the_release_gate() -> None:
+    from dragpoint.tools import release_check
+
+    assert "check_examples" in release_check.check_names()
+
+
+def test_the_check_is_wired_into_ci() -> None:
+    workflow = (Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "dragpoint.tools.check_examples" in workflow
