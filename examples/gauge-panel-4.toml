@@ -1,0 +1,99 @@
+# The gauge panel off the number 4 filter house.
+#
+# Everything about this job is what the motor control centre job is not. The
+# scales are set round an arc in the figures only face, the tag plates are a
+# numbered run rather than twelve rows on a schedule, the customer works in
+# inches and sent the bores as fractions, and two of the plates have windows
+# in them that have to be milled out after the lettering is cut.
+#
+# It is here because a package with one example only gets tested one way.
+
+[job]
+name = "GAUGE-4"
+cutter = "V30-015"
+post = "iso"
+notes = "Scales first while the fine cutter is in, then the tags."
+
+[job.sheet]
+stock = "LAM16-BW"
+width = "300mm"
+height = "400mm"
+margin = "6mm"
+kerf = "1.5mm"
+
+[defaults]
+stock = "LAM16-BW"
+face = "panelgothic"
+cap_height = "3mm"
+margin = "2mm"
+halign = "centre"
+valign = "middle"
+fit = "condense"
+
+# The pressure scale. Figures round the top half of a 40 mm circle, in the
+# dial face because panelgothic at a legible height will not go round it.
+[[plate]]
+name = "SCALE-P1"
+size = ["90mm", "50mm"]
+lines = ["0    40    80    120    160"]
+face = "dialface"
+cap_height = "3.5mm"
+arc_radius = "40mm"
+arc_centre = ["45mm", "-12mm"]
+arc_sweep = 140.0
+notes = "0 to 160 bar. Check against the gauge before cutting the second one."
+
+# The same scale the other way up, for the gauge mounted below the walkway.
+[[plate]]
+name = "SCALE-P2"
+size = ["90mm", "50mm"]
+lines = ["0    40    80    120    160"]
+face = "dialface"
+cap_height = "3.5mm"
+arc_radius = "40mm"
+arc_centre = ["45mm", "-12mm"]
+arc_sweep = 140.0
+arc_clockwise = true
+
+# Twelve valve tags, numbered. One line on the schedule, twelve plates out
+# of the compiler, twelve programs into the machine.
+[[plate]]
+name = "VLV"
+size = ["50mm", "18mm"]
+lines = ["VLV-{n:03}", "FILTER 4"]
+cap_height = "2.5mm"
+quantity = 12
+sequence_start = 101
+
+  [[plate.feature]]
+  name = "fix"
+  kind = "hole"
+  at = ["6mm", "9mm"]
+  diameter = "1/8in"
+  clearance = "1mm"
+
+# The instrument plate. The window is the gauge cutout and the bore is the
+# switch, both off the customer drawing and both in fractions.
+[[plate]]
+name = "INST-1"
+size = ["5in", "3in"]
+lines = ["FILTER 4 INLET"]
+cap_height = "5mm"
+stock = "LAM32-RW"
+margin = "4mm"
+valign = "top"
+
+  [[plate.feature]]
+  name = "gauge"
+  kind = "cutout"
+  at = ["2 1/2in", "1 1/8in"]
+  width = "2 1/4in"
+  height = "1 1/2in"
+  clearance = "2mm"
+
+  [[plate.feature]]
+  name = "switch"
+  kind = "bore"
+  at = ["1/2in", "2 1/2in"]
+  diameter = "7/8in"
+  clearance = "1.5mm"
