@@ -187,3 +187,61 @@ def test_str_says_the_text_the_face_and_the_width(face: StrokeFace) -> None:
     run = shape_run("HI", face, TextStyle(cap_height=7.0))
     assert str(run).startswith("'HI' in panelgothic, ")
     assert str(run).endswith("mm wide")
+
+
+def test_figures_are_set_the_way_they_were_drawn_by_default() -> None:
+    face = shipped_face("dialface")
+    style = TextStyle(cap_height=3.5)
+    assert shape_run("100", face, style).width != shape_run("111", face, style).width
+
+
+def test_tabular_figures_all_take_the_same_room() -> None:
+    face = shipped_face("dialface")
+    style = TextStyle(cap_height=3.5, tabular=True)
+    assert shape_run("100", face, style).width == pytest.approx(shape_run("111", face, style).width)
+
+
+def test_the_pitch_is_the_widest_figure_in_the_face() -> None:
+    face = shipped_face("dialface")
+    style = TextStyle(cap_height=3.5, tabular=True)
+    scale = face.scale_for_cap_height(3.5)
+    assert shape_run("7", face, style).width == pytest.approx(face.figure_advance() * scale)
+
+
+def test_a_narrow_figure_is_centred_in_its_pitch() -> None:
+    face = shipped_face("dialface")
+    style = TextStyle(cap_height=3.5, tabular=True)
+    one = shape_run("1", face, style)
+    box = one.ink_bounds()
+    assert box is not None
+    middle = (box.min_x + box.max_x) / 2.0
+    assert middle == pytest.approx(one.width / 2.0, abs=0.2)
+
+
+def test_two_columns_of_figures_line_up_on_the_middle_of_each_digit() -> None:
+    face = shipped_face("dialface")
+    style = TextStyle(cap_height=3.5, tabular=True)
+
+    def middles(text: str) -> list[float]:
+        run = shape_run(text, face, style)
+        found = []
+        for item in run.placed:
+            box = item.ink_bounds()
+            assert box is not None
+            found.append((box.min_x + box.max_x) / 2.0)
+        return found
+
+    assert middles("100") == pytest.approx(middles("110"), abs=0.25)
+
+
+def test_letters_are_not_put_on_the_figure_pitch() -> None:
+    face = shipped_face("panelgothic")
+    plain = TextStyle(cap_height=3.0)
+    tabular = TextStyle(cap_height=3.0, tabular=True)
+    assert shape_run("PUMP", face, tabular).width == pytest.approx(
+        shape_run("PUMP", face, plain).width
+    )
+
+
+def test_a_face_that_draws_figures_has_a_pitch() -> None:
+    assert shipped_face("panelgothic").figure_advance() > 0

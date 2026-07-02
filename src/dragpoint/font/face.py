@@ -100,6 +100,21 @@ class StrokeFace:
         """Look a glyph up by the character it draws."""
         return self.glyph(glyph_name_for(character))
 
+    def figure_advance(self) -> int:
+        """The widest advance among the figures, or zero if it draws none.
+
+        A scale plate wants its figures on a pitch rather than set the way
+        they were drawn, so that 110 sits under 100 rather than half a digit
+        to the left of it. This is the pitch to use, and it comes off the
+        face rather than being a number somebody types.
+        """
+        widths = [
+            self.glyphs[glyph_name_for(digit)].advance
+            for digit in "0123456789"
+            if glyph_name_for(digit) in self.glyphs
+        ]
+        return max(widths) if widths else 0
+
     def has(self, character: str) -> bool:
         """True when the face draws ``character`` without falling back."""
         return glyph_name_for(character) in self.glyphs

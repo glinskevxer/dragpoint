@@ -26,6 +26,7 @@ def defaults(**overrides: Any) -> dict[str, Any]:
         "condense": 1.0,
         "slant": 0.0,
         "mirror": False,
+        "tabular": False,
         "wrap": False,
         "fit": "condense",
         "halign": "centre",

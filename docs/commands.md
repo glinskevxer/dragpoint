@@ -207,6 +207,7 @@ Compile a plate and print what the rules say about it.
 | `--tracking` | Space per glyph. | `0mm` |
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
+| `--tabular` | Set the figures on one pitch. |  |
 | `--mirror` | Cut it back to front. |  |
 | `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
@@ -246,6 +247,7 @@ Post the window milling for one plate as a program of its own.
 | `--tracking` | Space per glyph. | `0mm` |
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
+| `--tabular` | Set the figures on one pitch. |  |
 | `--mirror` | Cut it back to front. |  |
 | `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
@@ -288,6 +290,7 @@ Draw one plate as an SVG preview or a DXF.
 | `--tracking` | Space per glyph. | `0mm` |
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
+| `--tabular` | Set the figures on one pitch. |  |
 | `--mirror` | Cut it back to front. |  |
 | `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
@@ -329,6 +332,7 @@ Post the drilling for one plate as a program of its own.
 | `--tracking` | Space per glyph. | `0mm` |
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
+| `--tabular` | Set the figures on one pitch. |  |
 | `--mirror` | Cut it back to front. |  |
 | `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
@@ -369,6 +373,7 @@ Post one plate to a machine program.
 | `--tracking` | Space per glyph. | `0mm` |
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
+| `--tabular` | Set the figures on one pitch. |  |
 | `--mirror` | Cut it back to front. |  |
 | `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |
@@ -414,6 +419,7 @@ Estimate how long one plate takes.
 | `--tracking` | Space per glyph. | `0mm` |
 | `--condense` | Horizontal squeeze. | `1.0` |
 | `--slant` | Oblique, in degrees. |  |
+| `--tabular` | Set the figures on one pitch. |  |
 | `--mirror` | Cut it back to front. |  |
 | `--wrap` | Break long lines to fit. |  |
 | `--fit` |  | `condense` |

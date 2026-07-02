@@ -8,6 +8,12 @@ Shaping is deliberately dumb. There is no bidirectional text, no script
 detection and no substitution. A legend plate says PUMP 2 RUN, left to
 right, and the only cleverness it needs is kerning and a word space the
 plate can override.
+
+The one exception is tabular figures, and it is here rather than in the
+face because it is a property of the job: the same face sets a scale plate
+with its figures on a pitch and a legend with them set the way they were
+drawn. A figure on a pitch is centred in it, so the column lines up on the
+middle of the digit, which is where the eye reads a scale from.
 """
 
 from __future__ import annotations
@@ -142,11 +148,26 @@ class ShapedRun:
         return f"{self.text!r} in {self.face_name}, {self.width:.3f}mm wide"
 
 
-def _advance_for(glyph: Glyph, character: str, style: TextStyle, scale: float) -> float:
+def _advance_for(
+    glyph: Glyph, character: str, style: TextStyle, scale: float, pitch: float
+) -> float:
     """The pen movement after ``glyph``, before tracking."""
     if character == " " and style.word_space is not None:
         return style.word_space
+    if pitch > 0.0 and character.isdigit():
+        return pitch * scale * style.condense
     return glyph.advance * scale * style.condense
+
+
+def _figure_offset(glyph: Glyph, character: str, pitch: float, scale: float) -> float:
+    """How far into its pitch a figure sits, so it is centred in it.
+
+    Zero for everything that is not a figure and for a face whose figures
+    already fill the pitch, which is most of them for the zero itself.
+    """
+    if pitch <= 0.0 or not character.isdigit():
+        return 0.0
+    return (pitch - glyph.advance) / 2.0 * scale
 
 
 def shape_run(text: str, face: StrokeFace, style: TextStyle) -> ShapedRun:
@@ -161,6 +182,7 @@ def shape_run(text: str, face: StrokeFace, style: TextStyle) -> ShapedRun:
         raise ValueError("shape_run takes one line, split the text first")
     scale = face.scale_for_cap_height(style.cap_height)
     distortion = style.glyph_transform()
+    pitch = float(face.figure_advance()) if style.tabular else 0.0
     placed: list[PlacedGlyph] = []
     pen = 0.0
     previous: str | None = None
@@ -168,12 +190,13 @@ def shape_run(text: str, face: StrokeFace, style: TextStyle) -> ShapedRun:
     for character in text:
         name = glyph_name_for(character)
         glyph = face.glyph(name)
-        if style.kerning and previous is not None:
+        if style.kerning and previous is not None and not (pitch > 0.0 and character.isdigit()):
             pen += face.kern(previous, name) * scale * style.condense
+        inset = _figure_offset(glyph, character, pitch, scale)
         placed.append(
-            PlacedGlyph(glyph=glyph, origin=Point(pen, 0.0), scale=scale, shape=distortion)
+            PlacedGlyph(glyph=glyph, origin=Point(pen + inset, 0.0), scale=scale, shape=distortion)
         )
-        pen += _advance_for(glyph, character, style, scale) + style.tracking
+        pen += _advance_for(glyph, character, style, scale, pitch) + style.tracking
         previous = name
 
     run = ShapedRun(

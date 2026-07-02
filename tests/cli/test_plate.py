@@ -288,3 +288,12 @@ def test_cutout_on_a_plate_with_no_windows_posts_an_empty_program(runner: CliRun
     result = run(runner, "plate", "cutout", "--size", "60x20mm", "RUN")
     assert result.exit_code == 0
     assert "nothing to mill" in result.output
+
+
+def test_figures_can_be_set_on_one_pitch(runner: CliRunner) -> None:
+    plain = run(runner, "plate", "draw", "--size", "60x20mm", "--face", "dialface", "111")
+    tabular = run(
+        runner, "plate", "draw", "--size", "60x20mm", "--face", "dialface", "--tabular", "100"
+    )
+    assert plain.exit_code == tabular.exit_code == 0
+    assert plain.output != tabular.output

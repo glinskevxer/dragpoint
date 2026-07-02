@@ -39,6 +39,11 @@ class TextStyle:
     the drawing dimensions. ``tracking`` is extra space added after every
     glyph including the last, because a run that is going to be centred needs
     the trailing space counted or it sits half a track to the left.
+
+    ``tabular`` sets every figure on the same pitch, which is what a scale
+    or a column of readings wants and what a word does not. A one is
+    narrower than a zero in every face worth having, so 110 under 100 comes
+    out shifted unless somebody asks for this.
     """
 
     cap_height: float
@@ -49,6 +54,7 @@ class TextStyle:
     kerning: bool = True
     mirror: bool = False
     line_pitch: float | None = None
+    tabular: bool = False
 
     def __post_init__(self) -> None:
         if self.cap_height <= 0.0:

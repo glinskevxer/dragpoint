@@ -43,6 +43,7 @@ _PLATE_PLAIN = (
     "condense",
     "slant",
     "kerning",
+    "tabular",
     "mirror",
     "quantity",
     "sequence_start",

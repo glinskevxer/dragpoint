@@ -69,6 +69,7 @@ class PlateSpec:
     word_space: float | None = None
     line_pitch: float | None = None
     kerning: bool = True
+    tabular: bool = False
     mirror: bool = False
     margin: float = DEFAULT_MARGIN
     halign: HAlign = HAlign.CENTRE
@@ -217,6 +218,7 @@ class PlateSpec:
             kerning=self.kerning,
             mirror=self.mirror,
             line_pitch=self.line_pitch,
+            tabular=self.tabular,
         )
 
     def feature(self, name: str) -> Feature:
