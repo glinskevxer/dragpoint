@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from dragpoint.errors import SpecError
+from dragpoint.geometry.point import Point
+from dragpoint.spec.feature import FeatureKind
 from dragpoint.spec.sheetload import load_csv_job, parse_csv_plates
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mcc-panel-8.csv"
@@ -159,3 +161,72 @@ def test_an_empty_file_has_no_plates() -> None:
 def test_a_heading_row_that_says_nothing_useful_is_refused() -> None:
     with pytest.raises(SpecError, match="no column says"):
         parse_csv_plates("Colour,Finish\nred,matt\n")
+
+
+HOLES = 'Plate,Size,Material,Hole1,Hole2\nP-1,120x25,LAM16-BW,"6,12.5 4.2","114,12.5 4.2"\n'
+
+
+def test_a_hole_column_puts_a_hole_on_the_plate() -> None:
+    plate = parse_csv_plates(HOLES)[0]
+    assert len(plate.features) == 2
+    assert plate.features[0].centre == Point(6.0, 12.5)
+    assert plate.features[0].width == pytest.approx(4.2)
+
+
+def test_the_holes_come_out_in_column_order() -> None:
+    plate = parse_csv_plates(HOLES)[0]
+    assert [hole.name for hole in plate.features] == ["hole1", "hole2"]
+
+
+def test_a_hole_is_a_hole_rather_than_a_cutout() -> None:
+    assert parse_csv_plates(HOLES)[0].features[0].kind is FeatureKind.HOLE
+    assert parse_csv_plates(HOLES)[0].features[0].is_round
+
+
+def test_an_empty_hole_cell_is_a_plate_without_that_hole() -> None:
+    text = 'Plate,Size,Material,Hole1,Hole2\nP-1,120x25,LAM16-BW,"6,12.5 4.2",\n'
+    assert len(parse_csv_plates(text)[0].features) == 1
+
+
+def test_a_plate_with_no_hole_columns_has_no_features() -> None:
+    text = "Plate,Size,Material\nP-1,60x20,LAM16-BW\n"
+    assert parse_csv_plates(text)[0].features == ()
+
+
+def test_a_hole_can_carry_units() -> None:
+    text = 'Plate,Size,Material,Hole1\nP-1,5x3in,LAM16-BW,"1/2,1 1/2in 1/8in"\n'
+    hole = parse_csv_plates(text)[0].features[0]
+    assert hole.centre.x == pytest.approx(12.7)
+    assert hole.centre.y == pytest.approx(38.1)
+    assert hole.width == pytest.approx(3.175)
+
+
+def test_a_hole_cell_with_one_number_names_the_column() -> None:
+    text = 'Plate,Size,Material,Hole1\nP-1,120x25,LAM16-BW,"6,12.5"\n'
+    with pytest.raises(SpecError, match="hole1.*centre and a diameter"):
+        parse_csv_plates(text)
+
+
+def test_a_hole_cell_with_no_comma_names_the_column() -> None:
+    text = 'Plate,Size,Material,Hole1\nP-1,120x25,LAM16-BW,"6 4.2"\n'
+    with pytest.raises(SpecError, match="hole1.*not a centre"):
+        parse_csv_plates(text)
+
+
+def test_a_hole_cell_that_is_not_numbers_names_the_row() -> None:
+    text = 'Plate,Size,Material,Hole1\nP-1,120x25,LAM16-BW,"left,middle 4.2"\n'
+    with pytest.raises(SpecError, match=r"row 2 \(P-1\)"):
+        parse_csv_plates(text)
+
+
+def test_a_hole_off_the_plate_names_the_row() -> None:
+    text = 'Plate,Size,Material,Hole1\nP-1,60x20,LAM16-BW,"200,10 4.2"\n'
+    plate = parse_csv_plates(text)[0]
+    assert plate.features_outside_the_blank()
+
+
+def test_the_shipped_csv_carries_its_fixing_holes() -> None:
+    job = load_csv_job(EXAMPLE)
+    drilled = [plate for plate in job.plates if plate.features]
+    assert [plate.name for plate in drilled] == ["P-212"]
+    assert len(drilled[0].features) == 2

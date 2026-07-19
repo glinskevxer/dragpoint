@@ -14,6 +14,12 @@ usually carries a drawing number and a delivery date that mean nothing here.
 Line columns are the one thing that has to be in order. ``line1``, ``line2``
 and ``line3`` are the lines of the legend, top to bottom, and a blank one in
 the middle is a blank line rather than a line that has gone missing.
+
+Hole columns work the same way and carry three numbers each: where the hole
+goes and how big it is, written ``6,12.5 4.2`` or ``1/4,1/2in 1/8in``. It is
+a cramped little format and it is the one a drawing office will actually
+fill in, which beats a format nobody uses. Anything it cannot read names the
+row and the column rather than guessing.
 """
 
 from __future__ import annotations
@@ -25,6 +31,8 @@ from pathlib import Path
 from typing import Any
 
 from dragpoint.errors import DragpointError, SpecError
+from dragpoint.geometry.point import Point
+from dragpoint.spec.feature import Feature
 from dragpoint.spec.job import JobSpec
 from dragpoint.spec.plate import PlateSpec
 from dragpoint.units import parse_length
@@ -61,6 +69,9 @@ LENGTHS = ("width", "height", "cap_height", "margin", "border", "depth", "tracki
 WORDS = ("name", "stock", "face", "cutter", "notes")
 """Columns read as plain text."""
 
+HOLE_PREFIX = "hole"
+"""What a hole column is called, with a number after it: hole1, hole2."""
+
 
 def _key(heading: str) -> str:
     """The name this package uses for a column heading."""
@@ -84,6 +95,54 @@ def _lines_of(row: Mapping[str, str]) -> tuple[str, ...]:
     while lines and not lines[-1]:
         lines.pop()
     return tuple(lines)
+
+
+def _holes_of(source: str, where: str, row: Mapping[str, str]) -> tuple[Feature, ...]:
+    """The fixing holes, from the numbered hole columns, in order.
+
+    Each cell is a centre and a diameter: two numbers with a comma between
+    them, a space, then one more. An empty cell is a plate that does not
+    have that hole, which is the normal case on a mixed schedule.
+
+    The diameter is the last thing in the cell rather than the second thing
+    in it, because a centre written in fractions has a space in the middle
+    of it and ``1/2,1 1/2in 1/8in`` has to mean what a fitter would read it
+    as.
+    """
+    numbered = sorted(
+        (int(key[len(HOLE_PREFIX) :]), key, value)
+        for key, value in row.items()
+        if key.startswith(HOLE_PREFIX) and key[len(HOLE_PREFIX) :].isdigit()
+    )
+    holes: list[Feature] = []
+    for index, key, value in numbered:
+        if not value.strip():
+            continue
+        holes.append(_hole(source, where, key, value, index))
+    return tuple(holes)
+
+
+def _hole(source: str, where: str, key: str, value: str, index: int) -> Feature:
+    """One hole cell, read into a feature."""
+    parts = value.strip().rsplit(maxsplit=1)
+    if len(parts) != 2:
+        raise SpecError(
+            source, where, f"{key}: {value!r} is not a centre and a diameter, write it as 6,12 4.2"
+        )
+    centre, diameter = parts
+    if "," not in centre:
+        raise SpecError(source, where, f"{key}: {centre!r} is not a centre, write it as 6,12")
+    across, _, up = centre.partition(",")
+    unit = "".join(character for character in up if character.isalpha())
+    first = across if any(character.isalpha() for character in across) else across + unit
+    return Feature.round_hole(
+        f"{HOLE_PREFIX}{index}",
+        Point(
+            _length(source, where, key, first),
+            _length(source, where, key, up),
+        ),
+        _length(source, where, key, diameter),
+    )
 
 
 def _size_of(source: str, where: str, row: Mapping[str, str]) -> tuple[float, float]:
@@ -141,6 +200,9 @@ def _plate_of(
     lines = _lines_of(row)
     if lines:
         values["lines"] = lines
+    holes = _holes_of(source, where, row)
+    if holes:
+        values["features"] = holes
 
     if "stock" not in values:
         raise SpecError(source, where, "stock is missing and there is no default")
