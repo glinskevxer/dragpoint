@@ -218,3 +218,39 @@ def test_every_drill_size_in_the_job_is_listed_once() -> None:
     text = setup_sheet(compile_job(load_job(EXAMPLE)))
     line = next(line for line in text.splitlines() if line.startswith("drills"))
     assert line.count("4.2mm") == 1
+
+
+def gauge_sheet() -> str:
+    """The setup sheet for the shipped job that needs all three setups."""
+    example = EXAMPLE.parent / "gauge-panel-4.toml"
+    return setup_sheet(compile_job(load_job(example)))
+
+
+def test_the_windows_get_a_block_of_their_own() -> None:
+    text = gauge_sheet()
+    assert "WINDOWS (third setup, profile cutter in the spindle)" in text
+    assert "tabs a window" in text
+
+
+def test_the_window_block_names_the_plate_and_the_cutter() -> None:
+    text = gauge_sheet()
+    assert "INST-1" in text
+    assert "P-020" in text
+
+
+def test_a_job_with_no_windows_has_no_window_block() -> None:
+    assert "WINDOWS" not in setup_sheet(compile_job(load_job(EXAMPLE)))
+
+
+def test_the_sheet_says_what_the_whole_shop_time_is() -> None:
+    assert "all setups" in gauge_sheet()
+
+
+def test_a_job_of_one_setup_does_not_say_all_setups() -> None:
+    plate = PlateSpec(name="P-1", width=60.0, height=20.0, stock="LAM16-BW", lines=("RUN",))
+    assert "all setups" not in setup_sheet(compile_job(JobSpec(name="J", plates=(plate,))))
+
+
+def test_the_drilling_block_still_comes_before_the_windows() -> None:
+    text = gauge_sheet()
+    assert text.index("DRILLING") < text.index("WINDOWS")

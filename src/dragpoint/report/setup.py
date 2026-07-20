@@ -8,6 +8,11 @@ gets ignored and the setter works it out again from the schedule.
 
 It is plain text on purpose. It gets printed on a dot matrix printer next to
 a machine from 1998 and it gets written on in pencil.
+
+The sheet is built as blocks, and a block that has nothing to say prints
+nothing at all. That is what keeps it to a page: a job with no windows and
+no drilling gets a sheet about engraving, and the operator who reads three
+lines and stops has read all three that mattered.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ from dragpoint.compiler.drill import drill_plate
 from dragpoint.compiler.job import EngravedJob
 from dragpoint.compiler.plate import EngravedPlate
 from dragpoint.estimate.cycle import JobTime, estimate_job
+from dragpoint.estimate.setups import job_work
 from dragpoint.nest.shelf import NestResult
 from dragpoint.rules.report import Severity
 
@@ -91,15 +97,19 @@ def _drilling(job: EngravedJob) -> list[str]:
     listed the holes in the engraving table would have somebody drilling
     with a cutter in the machine.
     """
-    plans = [drill_plate(plate.spec) for plate in job]
-    with_holes = [plan for plan in plans if len(plan)]
-    if not with_holes:
+    with_holes = [plan for plan in (drill_plate(plate.spec) for plate in job) if len(plan)]
+    rows = [f"{plan.name:<10}  {plan}" for plan in with_holes]
+    if rows:
+        sizes = sorted({size for plan in with_holes for size in plan.diameters()})
+        rows.append(f"{'drills':<10}  {', '.join(f'{size:g}mm' for size in sizes)}")
+    return _block("DRILLING (second setup, drill in the spindle)", rows)
+
+
+def _block(title: str, rows: list[str]) -> list[str]:
+    """One titled block, or nothing when there are no rows to put in it."""
+    if not rows:
         return []
-    lines = ["", _rule(), "DRILLING (second setup, drill in the spindle)", _rule()]
-    lines.extend(f"{plan.name:<10}  {plan}" for plan in with_holes)
-    sizes = sorted({size for plan in with_holes for size in plan.diameters()})
-    lines.append(f"{'drills':<10}  {', '.join(f'{size:g}mm' for size in sizes)}")
-    return lines
+    return ["", _rule(), title, _rule(), *rows]
 
 
 def _windows(job: EngravedJob) -> list[str]:
@@ -110,17 +120,32 @@ def _windows(job: EngravedJob) -> list[str]:
     and by then it has been engraved and the window has to be cut round the
     lettering with the legend already on it.
     """
-    plans = [cutout_plate(plate.spec) for plate in job]
-    milled = [plan for plan in plans if len(plan)]
-    if not milled:
-        return []
-    lines = ["", "windows"]
+    milled = [plan for plan in (cutout_plate(plate.spec) for plate in job) if len(plan)]
+    rows: list[str] = []
     for plan in milled:
-        lines.append(f"  {plan}")
-        lines.append(
-            f"  {'':<10}{plan.tabs_per_window} tabs a window, {plan.tab_height:g}mm left under"
+        rows.append(f"{plan.name:<10}  {plan}")
+        rows.append(
+            f"{'':<10}  {plan.tabs_per_window} tabs a window, {plan.tab_height:g}mm left under"
         )
-    return lines
+    return _block("WINDOWS (third setup, profile cutter in the spindle)", rows)
+
+
+def _shop_time(job: EngravedJob) -> list[str]:
+    """What the whole job costs across every setup it needs.
+
+    The engraving total is already in the table above and it is the number
+    everybody quotes off. This is the honest one: a plate that is engraved,
+    drilled and milled goes across the machine three times and gets loaded
+    three times, and the difference on a job of any size is an afternoon.
+    """
+    work, seconds = job_work(job)
+    setups = sum(item.setups for item in work)
+    if setups == len(work):
+        return []
+    return [
+        "",
+        f"{'all setups':<10}  {setups} setups, {seconds / 60.0:.0f} minutes with tool changes",
+    ]
 
 
 def _tips(job: EngravedJob) -> list[str]:
@@ -130,8 +155,7 @@ def _tips(job: EngravedJob) -> list[str]:
     A setup sheet that says every cutter is fine is a setup sheet with four
     lines on it that nobody reads, and then the fifth one is missed.
     """
-    lives = job.tip_lives()
-    hungry = [life for life in lives if not life.within_one_tip]
+    hungry = [life for life in job.tip_lives() if not life.within_one_tip]
     if not hungry:
         return []
     lines = ["", "tips"]
@@ -185,9 +209,10 @@ def setup_sheet(
             for name, count in nest.left_over:
                 lines.append(f"          {count} of {name} did not fit")
 
-    lines.extend(_windows(job))
+    lines.extend(_shop_time(job))
     lines.extend(_tips(job))
     lines.extend(_drilling(job))
+    lines.extend(_windows(job))
     lines.extend(_violations(job))
     lines.append("")
     return "\n".join(lines) + "\n"
