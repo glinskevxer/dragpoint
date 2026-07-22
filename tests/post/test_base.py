@@ -12,6 +12,7 @@ from dragpoint.path.plan import Toolpath
 from dragpoint.post.base import (
     MAX_REPEATS,
     POSTS,
+    WORK_OFFSETS,
     PostDef,
     PostOptions,
     post,
@@ -174,3 +175,22 @@ def test_more_repeats_than_any_fixture_holds_is_refused() -> None:
 def test_repeats_with_no_pitch_would_cut_the_same_blank_twice() -> None:
     with pytest.raises(ValueError, match="same blank"):
         PostOptions(repeats=4)
+
+
+def test_the_default_datum_is_the_one_a_machine_sits_in() -> None:
+    assert PostOptions().work_offset == 54
+
+
+def test_every_offset_the_control_has_is_allowed() -> None:
+    for offset in WORK_OFFSETS:
+        assert PostOptions(work_offset=offset).work_offset == offset
+
+
+def test_a_datum_the_control_does_not_have_is_refused() -> None:
+    with pytest.raises(ValueError, match="not a work offset"):
+        PostOptions(work_offset=53)
+
+
+def test_the_message_says_which_offsets_there_are() -> None:
+    with pytest.raises(ValueError, match="G54, G55"):
+        PostOptions(work_offset=60)

@@ -221,3 +221,23 @@ def test_line_numbers_run_through_the_subprogram_as_well() -> None:
     text = repeated(line_numbers=True)
     assert "N10 " in text
     assert text.count("N") > 20
+
+
+def test_the_preamble_names_the_datum() -> None:
+    text = render_iso(simple_path(), PostOptions())
+    assert "G21 G90 G17 G40 G49 G54" in text
+
+
+def test_a_second_fixture_gets_its_own_datum() -> None:
+    text = render_iso(simple_path(), PostOptions(work_offset=56))
+    assert "G56" in text
+    assert "G54" not in text
+
+
+def test_the_datum_is_written_once() -> None:
+    assert render_iso(simple_path(), PostOptions()).count("G54") == 1
+
+
+def test_a_repeated_program_still_names_the_datum_once() -> None:
+    text = render_iso(simple_path(), PostOptions(repeats=3, pitch_x=45.0, work_offset=57))
+    assert text.count("G57") == 1

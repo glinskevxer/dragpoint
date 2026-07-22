@@ -127,6 +127,7 @@ def post_job(context: click.Context, /, schedule: Path, out: Path, force: bool) 
             spec.post,
             plate.toolpath,
             PostOptions(
+                work_offset=spec.work_offset,
                 program=f"{spec.name} {plate.name}",
                 number=1000 + number,
                 spindle=plate.stock.spindle,
@@ -255,6 +256,7 @@ def cutout_job(schedule: Path, out: Path, tab: str, no_tabs: bool) -> None:
             spec.post,
             plan.toolpath,
             PostOptions(
+                work_offset=spec.work_offset,
                 program=f"{spec.name} {plan.name} CUTOUT",
                 spindle=plan.stock.spindle,
                 notes=(
@@ -293,6 +295,7 @@ def drill_job(schedule: Path, out: Path, peck: str, all_plates: bool) -> None:
                 spec.post,
                 plan.toolpath if run is None else run.toolpath,
                 PostOptions(
+                    work_offset=spec.work_offset,
                     program=f"{spec.name} {plan.name} DRILL",
                     spindle=plan.stock.spindle,
                     notes=(

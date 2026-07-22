@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from dragpoint.errors import OutOfRange
-from dragpoint.spec.job import JobSpec, Sheet
+from dragpoint.spec.job import DEFAULT_WORK_OFFSET, JobSpec, Sheet
 from dragpoint.spec.plate import PlateSpec
 
 
@@ -156,3 +156,21 @@ def test_every_rule_a_job_names_is_listed_once_and_sorted() -> None:
 def test_the_names_are_not_checked_against_the_register() -> None:
     job = JobSpec(name="J1", rules_skip=("no-such-rule",))
     assert job.mentions_rules() == ("no-such-rule",)
+
+
+def test_a_job_is_cut_against_the_first_datum_unless_it_says_otherwise() -> None:
+    assert JobSpec(name="J").work_offset == DEFAULT_WORK_OFFSET
+
+
+def test_a_job_can_name_the_fixture_it_is_set_on() -> None:
+    assert JobSpec(name="J", work_offset=56).work_offset == 56
+
+
+def test_a_datum_the_control_does_not_have_is_refused() -> None:
+    with pytest.raises(OutOfRange, match="work offset"):
+        JobSpec(name="J", work_offset=53)
+
+
+def test_a_datum_past_the_last_one_is_refused() -> None:
+    with pytest.raises(OutOfRange, match="work offset"):
+        JobSpec(name="J", work_offset=60)

@@ -401,6 +401,7 @@ Post one plate to a machine program.
 | `--program-number` |  | `1000` |
 | `--line-numbers` | Number the blocks. |  |
 | `--repeats` | Blanks on the fixture. | `1` |
+| `--work-offset` | Datum, G54 to G59. | `54` |
 | `--pitch` | Step between blanks in x. | `0mm` |
 | `--pitch-y` | Step between blanks in y. | `0mm` |
 | `--force` | Post it even if the rules found an error. |  |

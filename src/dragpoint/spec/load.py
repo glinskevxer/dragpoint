@@ -19,7 +19,7 @@ from typing import Any
 from dragpoint.errors import DragpointError, SpecError
 from dragpoint.geometry.point import Point
 from dragpoint.spec.feature import Feature, FeatureKind
-from dragpoint.spec.job import JobSpec, Sheet
+from dragpoint.spec.job import DEFAULT_WORK_OFFSET, JobSpec, Sheet
 from dragpoint.spec.plate import PlateSpec
 from dragpoint.text.fit import FitPolicy
 from dragpoint.text.layout import HAlign, VAlign
@@ -81,7 +81,17 @@ def parse_job(raw: bytes | str, source: str = "<string>") -> JobSpec:
         source,
         "job",
         job_table,
-        {"name", "cutter", "post", "spring_pass", "depth", "notes", "sheet", "rules"},
+        {
+            "name",
+            "cutter",
+            "post",
+            "work_offset",
+            "spring_pass",
+            "depth",
+            "notes",
+            "sheet",
+            "rules",
+        },
     )
 
     plates = tuple(
@@ -97,6 +107,7 @@ def parse_job(raw: bytes | str, source: str = "<string>") -> JobSpec:
             sheet=sheet,
             cutter=str(job_table.get("cutter", "V30-015")),
             post=str(job_table.get("post", "iso")),
+            work_offset=int(job_table.get("work_offset", DEFAULT_WORK_OFFSET)),
             spring_pass=bool(job_table.get("spring_pass", False)),
             depth=_optional_length(source, "job", job_table, "depth"),
             notes=str(job_table.get("notes", "")),

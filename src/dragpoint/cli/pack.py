@@ -101,6 +101,7 @@ def _programs(made: EngravedJob, spec: JobSpec, out: Path) -> int:
             spec.post,
             plate.toolpath,
             PostOptions(
+                work_offset=spec.work_offset,
                 program=f"{spec.name} {plate.name}",
                 number=1000 + number,
                 spindle=plate.stock.spindle,
@@ -124,6 +125,7 @@ def _drilling(made: EngravedJob, spec: JobSpec, out: Path) -> int:
                 spec.post,
                 plan.toolpath if run is None else run.toolpath,
                 PostOptions(
+                    work_offset=spec.work_offset,
                     program=f"{spec.name} {plan.name} DRILL",
                     spindle=plan.stock.spindle,
                     notes=(f"{len(plan)} holes {plan.depth:.2f}mm deep in {plan.stock.name}",),
@@ -145,6 +147,7 @@ def _windows(made: EngravedJob, spec: JobSpec, out: Path) -> int:
             spec.post,
             plan.toolpath,
             PostOptions(
+                work_offset=spec.work_offset,
                 program=f"{spec.name} {plan.name} CUTOUT",
                 spindle=plan.stock.spindle,
                 notes=(f"{len(plan)} windows with {plan.cutter.name}",),

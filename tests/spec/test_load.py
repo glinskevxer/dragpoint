@@ -311,3 +311,23 @@ def test_a_bore_can_be_a_fraction(tmp_path: Path) -> None:
     bore = load_job(target).plates[0].features[0]
     assert bore.width == pytest.approx(22.225)
     assert bore.centre.x == pytest.approx(38.1)
+
+
+def test_a_schedule_can_name_the_fixture_datum(tmp_path: Path) -> None:
+    target = tmp_path / "datum.toml"
+    target.write_text(
+        "[job]\nname='J'\nwork_offset=57\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\n",
+        encoding="utf-8",
+    )
+    assert load_job(target).work_offset == 57
+
+
+def test_a_schedule_that_says_nothing_uses_the_first_datum(tmp_path: Path) -> None:
+    target = tmp_path / "plain.toml"
+    target.write_text(
+        "[job]\nname='J'\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\n",
+        encoding="utf-8",
+    )
+    assert load_job(target).work_offset == 54

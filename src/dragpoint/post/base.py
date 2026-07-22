@@ -28,6 +28,7 @@ from dragpoint.path.plan import Toolpath
 
 __all__ = [
     "MAX_REPEATS",
+    "WORK_OFFSETS",
     "POSTS",
     "PostDef",
     "PostOptions",
@@ -39,6 +40,15 @@ __all__ = [
 
 MAX_REPEATS = 999
 """Copies of one program a file may carry, which is a fixture full of them."""
+
+WORK_OFFSETS = (54, 55, 56, 57, 58, 59)
+"""The six work offsets every control that reads this dialect has.
+
+G54 is the one a machine sits in unless somebody has moved it. The other
+five exist for a shop that leaves a fixture set up: the vice for the small
+plates is G55 and stays G55 for a month, and a program that says so cannot
+be run against the wrong datum by accident.
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +72,7 @@ class PostOptions:
     repeats: int = 1
     pitch_x: float = 0.0
     pitch_y: float = 0.0
+    work_offset: int = 54
 
     def __post_init__(self) -> None:
         if not 0 <= self.decimals <= 6:
@@ -76,6 +87,9 @@ class PostOptions:
             raise OutOfRange("repeats", self.repeats, 1, MAX_REPEATS)
         if self.repeats > 1 and self.pitch_x == 0.0 and self.pitch_y == 0.0:
             raise ValueError(f"{self.repeats} repeats with no pitch would cut the same blank")
+        if self.work_offset not in WORK_OFFSETS:
+            wanted = ", ".join(f"G{offset}" for offset in WORK_OFFSETS)
+            raise ValueError(f"G{self.work_offset} is not a work offset, there is {wanted}")
 
     def offsets(self) -> tuple[tuple[float, float], ...]:
         """Where each copy of the program sits, the first one at nothing.

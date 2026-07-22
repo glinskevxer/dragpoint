@@ -79,6 +79,13 @@ class Sheet:
         return f"{self.stock} {self.width:g}x{self.height:g}mm"
 
 
+DEFAULT_WORK_OFFSET = 54
+"""The datum a job is cut against unless the fixture says otherwise."""
+
+LAST_WORK_OFFSET = 59
+"""The last one a control of this kind has."""
+
+
 @dataclass(frozen=True, slots=True)
 class JobSpec:
     """Everything one setup needs.
@@ -87,6 +94,12 @@ class JobSpec:
     package, because a job specification is data and knows nothing about
     what checks a plate. Turning them into a selection is the compiler's
     job, which is the layer that knows both.
+
+    ``work_offset`` is the datum the fixture for this job is set on. It
+    belongs to the job rather than to a plate because a fixture holds the
+    whole job, and it is here rather than in the post options because it is
+    something the shop decides once and writes down, not something whoever
+    runs the post types in again.
     """
 
     name: str
@@ -94,6 +107,7 @@ class JobSpec:
     sheet: Sheet | None = None
     cutter: str = DEFAULT_CUTTER
     post: str = "iso"
+    work_offset: int = DEFAULT_WORK_OFFSET
     spring_pass: bool = False
     depth: float | None = None
     rules_only: tuple[str, ...] = ()
@@ -104,6 +118,13 @@ class JobSpec:
     def __post_init__(self) -> None:
         if not self.name:
             raise ValueError("a job needs a name")
+        if not DEFAULT_WORK_OFFSET <= self.work_offset <= LAST_WORK_OFFSET:
+            raise OutOfRange(
+                f"{self.name} work offset",
+                self.work_offset,
+                DEFAULT_WORK_OFFSET,
+                LAST_WORK_OFFSET,
+            )
         if self.depth is not None and self.depth <= 0.0:
             raise OutOfRange(f"{self.name} depth", self.depth, QUANTUM, math.inf)
         seen: set[str] = set()

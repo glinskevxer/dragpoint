@@ -479,3 +479,18 @@ def test_the_time_command_names_the_plates_that_need_more_than_one_setup(
     result = run(runner, "job", "time", str(EXAMPLE))
     assert "setups" in result.output
     assert "P-120" in result.output
+
+
+def test_a_posted_job_carries_the_datum_the_schedule_names(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    schedule = tmp_path / "datum.toml"
+    schedule.write_text(
+        "[job]\nname='J'\nwork_offset=58\n[defaults]\nstock='LAM16-BW'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "programs"
+    result = run(runner, "job", "post", str(schedule), "--out", str(out))
+    assert result.exit_code == 0
+    assert "G58" in (out / "P.nc").read_text(encoding="utf-8")

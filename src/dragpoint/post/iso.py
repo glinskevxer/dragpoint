@@ -10,6 +10,11 @@ file size worth having on its own; it is a saving in what an operator has to
 read when they scroll through the program looking for the one line where the
 depth is wrong.
 
+The work offset is written into the preamble rather than left to whatever
+the control was last set to. A program that does not say which datum it
+means is a program that will one day be run against the wrong one, and on a
+machine with two fixtures on the bed that is a cutter into a clamp.
+
 A fixture full of blanks comes out as a subprogram called once per blank
 with a work shift in front of it. That is the whole reason a control has
 subprograms, and it means twelve plates are one copy of the moves rather
@@ -72,7 +77,7 @@ def _preamble(lines: list[str], options: PostOptions) -> None:
     if options.comments:
         for note in options.notes:
             lines.append(f"({_comment_safe(note)})")
-    lines.append("G21 G90 G17 G40 G49")
+    lines.append(f"G21 G90 G17 G40 G49 G{options.work_offset}")
     lines.append(f"T{options.tool} M06")
     if options.spindle:
         lines.append(f"S{options.spindle} M03")

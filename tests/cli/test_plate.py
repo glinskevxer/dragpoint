@@ -297,3 +297,15 @@ def test_figures_can_be_set_on_one_pitch(runner: CliRunner) -> None:
     )
     assert plain.exit_code == tabular.exit_code == 0
     assert plain.output != tabular.output
+
+
+def test_the_datum_can_be_chosen_on_the_command_line(runner: CliRunner) -> None:
+    result = run(runner, "plate", "post", "--size", "60x20mm", "--work-offset", "56", "RUN")
+    assert result.exit_code == 0
+    assert "G56" in result.output
+
+
+def test_a_datum_the_control_does_not_have_is_a_message(runner: CliRunner) -> None:
+    result = run(runner, "plate", "post", "--size", "60x20mm", "--work-offset", "99", "RUN")
+    assert result.exit_code != 0
+    assert "not a work offset" in result.output

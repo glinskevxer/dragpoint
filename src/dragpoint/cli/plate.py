@@ -75,6 +75,7 @@ def check(context: click.Context, /, quiet: bool, as_json: bool, **options: obje
 @click.option("--program-number", default=1000, show_default=True)
 @click.option("--line-numbers", is_flag=True, help="Number the blocks.")
 @click.option("--repeats", default=1, show_default=True, help="Blanks on the fixture.")
+@click.option("--work-offset", default=54, show_default=True, help="Datum, G54 to G59.")
 @click.option("--pitch", default="0mm", show_default=True, help="Step between blanks in x.")
 @click.option("--pitch-y", default="0mm", show_default=True, help="Step between blanks in y.")
 @click.option("--force", is_flag=True, help="Post it even if the rules found an error.")
@@ -87,6 +88,7 @@ def post_plate(
     program_number: int,
     line_numbers: bool,
     repeats: int,
+    work_offset: int,
     pitch: str,
     pitch_y: str,
     force: bool,
@@ -110,6 +112,7 @@ def post_plate(
             spindle=made.stock.spindle,
             line_numbers=line_numbers,
             repeats=repeats,
+            work_offset=work_offset,
             pitch_x=parse_length(pitch),
             pitch_y=parse_length(pitch_y),
             notes=(f"{made.cutter.name} in {made.stock.name} at {made.depth:.3f}mm",),
