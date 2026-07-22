@@ -129,3 +129,47 @@ def test_a_file_parses_to_a_module(tmp_path: Path) -> None:
 
 def test_the_docs_directory_is_where_the_generators_write() -> None:
     assert DOCS.parent == ROOT
+
+
+def problems_in(text: str) -> list[str]:
+    """Run the docstring check over one made up module."""
+    tree = ast.parse(text)
+    found: list[str] = []
+    if ast.get_docstring(tree) is None:
+        found.append("the module has no docstring")
+    for node in ast.walk(tree):
+        if not check_docstrings._wanted(node):
+            continue
+        assert isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
+        docstring = ast.get_docstring(node)
+        if docstring is None:
+            found.append(f"{node.name} has no docstring")
+            continue
+        complaint = check_docstrings._summary_problems(node, docstring)
+        if complaint is not None:
+            found.append(complaint)
+    return found
+
+
+def test_a_module_with_no_docstring_is_caught() -> None:
+    assert "the module has no docstring" in problems_in("def cut() -> None:\n    'Cut.'\n")
+
+
+def test_a_function_with_no_docstring_is_caught() -> None:
+    found = problems_in('"""A module."""\n\n\ndef cut() -> None:\n    pass\n')
+    assert "cut has no docstring" in found
+
+
+def test_a_class_with_no_docstring_is_caught() -> None:
+    found = problems_in('"""A module."""\n\n\nclass Plate:\n    x = 1\n')
+    assert "Plate has no docstring" in found
+
+
+def test_a_private_function_is_not_asked_for_one() -> None:
+    found = problems_in('"""A module."""\n\n\ndef _cut() -> None:\n    pass\n')
+    assert found == []
+
+
+def test_a_clean_module_says_nothing() -> None:
+    text = '"""A module."""\n\n\ndef cut() -> None:\n    """Cut the plate."""\n'
+    assert problems_in(text) == []

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from dragpoint import __version__
-from dragpoint.tools import release_check
+from dragpoint.tools import release_check, smoke
 from dragpoint.tools.support import DOCS, ROOT
 
 
@@ -71,3 +73,64 @@ def test_every_generator_is_checked_rather_than_written() -> None:
 
 def test_the_changelog_is_where_the_gate_looks_for_it() -> None:
     assert (ROOT / "CHANGELOG.md").is_file()
+
+
+def test_a_version_that_does_not_match_the_packaging_is_reported(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(release_check, "_pyproject_version", lambda: "9.9.9")
+    assert release_check.main([]) == 1
+    assert "pyproject says 9.9.9" in capsys.readouterr().err
+
+
+def test_a_changelog_with_nothing_to_say_is_reported(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(release_check, "_changelog_mentions", lambda version: False)
+    assert release_check.main([]) == 1
+    assert "changelog" in capsys.readouterr().err
+
+
+def test_a_missing_document_is_reported(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    monkeypatch.setattr(release_check, "DOCS", tmp_path)
+    assert release_check.main([]) == 1
+    assert "is missing" in capsys.readouterr().err
+
+
+def test_a_failing_check_is_reported_by_name(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(release_check, "checks", lambda: (("check_pretend", lambda: 1),))
+    assert release_check.main([]) == 1
+    assert "check_pretend failed" in capsys.readouterr().err
+
+
+def test_a_generated_document_that_is_out_of_date_is_reported(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def stale(arguments: object) -> int:
+        return 1
+
+    stale.__module__ = "dragpoint.tools.build_pretend"
+    monkeypatch.setattr(release_check, "GENERATORS", (stale,))
+    assert release_check.main([]) == 1
+    assert "build_pretend is out of date" in capsys.readouterr().err
+
+
+def test_a_failing_smoke_run_is_reported(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(smoke, "main", lambda arguments: 1)
+    assert release_check.main([]) == 1
+    assert "smoke run failed" in capsys.readouterr().err
+
+
+def test_a_release_with_several_problems_counts_them(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(release_check, "_pyproject_version", lambda: "9.9.9")
+    monkeypatch.setattr(smoke, "main", lambda arguments: 1)
+    assert release_check.main([]) == 1
+    assert "release: 2 problems" in capsys.readouterr().err

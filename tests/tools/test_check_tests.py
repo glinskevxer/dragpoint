@@ -61,3 +61,27 @@ def test_nested_functions_do_not_count(tmp_path: Path) -> None:
 
 def test_the_tools_are_the_one_directory_that_is_not_mirrored() -> None:
     assert "tools" in check_tests.SKIP_DIRECTORIES
+
+
+def test_a_test_module_with_too_few_tests_is_counted(tmp_path: Path) -> None:
+    thin = tmp_path / "test_thin.py"
+    thin.write_text('"""Thin."""\n\n\ndef test_one() -> None:\n    assert True\n', encoding="utf-8")
+    assert check_tests._test_count(thin) == 1
+    assert check_tests._test_count(thin) < check_tests.MIN_TESTS
+
+
+def test_a_module_full_of_tests_is_counted() -> None:
+    here = Path(__file__).resolve()
+    assert check_tests._test_count(here) >= check_tests.MIN_TESTS
+
+
+def test_the_test_for_a_source_file_is_where_the_mirror_says() -> None:
+    source = PACKAGE / "path" / "lead.py"
+    assert check_tests._expected_test(source).name == "test_lead.py"
+    assert check_tests._expected_test(source).parent.name == "path"
+
+
+def test_the_source_for_a_test_module_is_where_the_mirror_says() -> None:
+    test = TESTS / "path" / "test_lead.py"
+    assert check_tests._expected_source(test).name == "lead.py"
+    assert check_tests._expected_source(test).parent.name == "path"

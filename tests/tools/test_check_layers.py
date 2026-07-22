@@ -60,3 +60,30 @@ def test_both_import_forms_are_seen() -> None:
 def test_a_relative_import_is_not_counted() -> None:
     tree = ast.parse("from . import thing\n")
     assert check_layers._imports(tree) == []
+
+
+def test_an_import_from_a_higher_layer_is_caught() -> None:
+    tree = ast.parse("from dragpoint.compiler.plate import compile_plate\n")
+    imported = check_layers._imports(tree)
+    assert imported == [(1, "dragpoint.compiler.plate")]
+    assert check_layers._package_of(imported[0][1]) == "compiler"
+
+
+def test_a_name_in_no_layer_is_recognised_as_such() -> None:
+    assert check_layers._package_of("dragpoint.nosuchlayer") == "nosuchlayer"
+    assert "nosuchlayer" not in check_layers.RANKS
+
+
+def test_something_that_is_not_ours_is_no_layer_at_all() -> None:
+    assert check_layers._package_of("click") is None
+    assert check_layers._package_of("dragpoint") is None
+
+
+def test_a_plain_import_is_picked_up_as_well() -> None:
+    tree = ast.parse("import dragpoint.units\n")
+    assert check_layers._imports(tree) == [(1, "dragpoint.units")]
+
+
+def test_a_relative_import_is_left_alone() -> None:
+    tree = ast.parse("from . import support\n")
+    assert check_layers._imports(tree) == []
