@@ -38,7 +38,10 @@ RACK_FILE = Path(__file__).resolve().parent / "stock" / "rack.toml"
 """The rack this shop runs, shipped inside the package."""
 
 REQUIRED = ("description", "thickness", "nominal", "per_pass", "feed", "plunge", "spindle")
-"""What every entry in a rack file has to say. ``cap`` is the only option."""
+"""What every entry in a rack file has to say."""
+
+OPTIONAL = ("cap", "price")
+"""What it may say as well: a cap for two ply, and money a square metre."""
 
 BREAK_THROUGH = 0.05
 """Millimetres past the cap that guarantees a clean colour change."""
@@ -55,6 +58,11 @@ class Material:
     except the spindle speed, which is revolutions per minute, and the feeds,
     which are millimetres per minute because that is what the controllers
     take.
+
+    ``price`` is money a square metre and it is optional, because a rack
+    that has to be repriced before a job can be cut is a rack somebody will
+    delete the prices out of. A sheet with no price on it still cuts; it
+    just cannot be quoted.
     """
 
     name: str
@@ -66,6 +74,7 @@ class Material:
     feed: float
     plunge_feed: float
     spindle: int
+    price: float | None = None
 
     def __post_init__(self) -> None:
         if self.thickness <= 0.0:
@@ -80,6 +89,8 @@ class Material:
             raise OutOfRange("plunge feed", self.plunge_feed, QUANTUM, math.inf)
         if self.spindle < 0:
             raise OutOfRange("spindle", self.spindle, 0, 30000)
+        if self.price is not None and self.price < 0.0:
+            raise OutOfRange("price", self.price, 0.0, math.inf)
         low, high = self.depth_window()
         if low > high:
             raise OutOfRange("nominal depth", self.nominal_depth, low, high)
@@ -157,7 +168,7 @@ def _sheet(source: str, code: str, entry: dict[str, Any]) -> Material:
     missing = [key for key in REQUIRED if key not in entry]
     if missing:
         raise StockError(source, code, f"nothing says {', '.join(missing)}")
-    extra = set(entry) - set(REQUIRED) - {"cap"}
+    extra = set(entry) - set(REQUIRED) - set(OPTIONAL)
     if extra:
         raise StockError(source, code, f"nothing here uses {', '.join(sorted(extra))}")
     try:
@@ -171,6 +182,7 @@ def _sheet(source: str, code: str, entry: dict[str, Any]) -> Material:
             feed=float(entry["feed"]),
             plunge_feed=float(entry["plunge"]),
             spindle=int(entry["spindle"]),
+            price=None if entry.get("price") is None else float(entry["price"]),
         )
     except (TypeError, ValueError) as bad:
         raise StockError(source, code, f"one of these is not a number: {bad}") from bad

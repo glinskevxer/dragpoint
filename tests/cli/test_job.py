@@ -494,3 +494,37 @@ def test_a_posted_job_carries_the_datum_the_schedule_names(
     result = run(runner, "job", "post", str(schedule), "--out", str(out))
     assert result.exit_code == 0
     assert "G58" in (out / "P.nc").read_text(encoding="utf-8")
+
+
+def test_a_job_is_quoted_in_three_parts(runner: CliRunner) -> None:
+    result = run(runner, "job", "quote", str(EXAMPLE))
+    assert result.exit_code == 0
+    assert "material" in result.output
+    assert "machining" in result.output
+    assert "setting" in result.output
+    assert "total" in result.output
+
+
+def test_the_rate_changes_the_quote(runner: CliRunner) -> None:
+    cheap = run(runner, "job", "quote", str(EXAMPLE), "--rate", "10", "--json")
+    dear = run(runner, "job", "quote", str(EXAMPLE), "--rate", "100", "--json")
+    assert json.loads(cheap.output)["machining"] < json.loads(dear.output)["machining"]
+
+
+def test_a_quote_can_come_out_as_json(runner: CliRunner) -> None:
+    payload = json.loads(run(runner, "job", "quote", str(EXAMPLE), "--json").output)
+    assert payload["job"] == "MCC-7"
+    assert payload["pieces"] == 15
+    assert payload["total"] > 0.0
+
+
+def test_a_quote_says_what_it_could_not_price(runner: CliRunner, tmp_path: Path) -> None:
+    schedule = tmp_path / "steel.toml"
+    schedule.write_text(
+        "[job]\nname='J'\ncutter='V10-005'\n[defaults]\nstock='STAIN-10'\ndepth='0.08mm'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\n",
+        encoding="utf-8",
+    )
+    result = run(runner, "job", "quote", str(schedule))
+    assert result.exit_code == 0
+    assert "no price for STAIN-10" in result.output

@@ -154,6 +154,16 @@ Post every plate in a schedule, one file each.
 | `--out` | Directory to write the programs into. |  |
 | `--force` | Post plates that failed the rules. |  |
 
+### `dragpoint job quote SCHEDULE`
+
+Price a job: material, machining and setting.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--rate` | Money an hour. | `45.0` |
+| `--setting` | Money a cutter. | `15.0` |
+| `--json` | Print it as JSON. |  |
+
 ### `dragpoint job sheet SCHEDULE`
 
 Write the setup sheet that goes to the machine with the job.

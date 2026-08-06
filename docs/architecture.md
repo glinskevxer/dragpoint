@@ -41,7 +41,7 @@ import that would break it fails the build rather than the review.
 - **`dragpoint.post`** `base`, `iso`, `marker`, `plotter`
 - **`dragpoint.compiler`** `cutout`, `drill`, `job`, `plate`, `settings`
 - **`dragpoint.draw`** `dxf`, `sheet`, `specimen`, `svg`
-- **`dragpoint.estimate`** `cycle`, `setups`
+- **`dragpoint.estimate`** `cycle`, `price`, `setups`
 - **`dragpoint.report`** `setup`, `traveller`
 - **`dragpoint.cli`** `common`, `crib`, `font`, `job`, `main`, `options`, `pack`, `plate`
 - **`dragpoint.tools`** `build_architecture`, `build_commands`, `build_crib`, `build_rules`, `check_docstrings`, `check_examples`, `check_face`, `check_layers`, `check_naming`, `check_tests`, `check_wiring`, `generate`, `release_check`, `smoke`, `support`

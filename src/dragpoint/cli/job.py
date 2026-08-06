@@ -27,6 +27,7 @@ from dragpoint.compiler.plate import rule_selection
 from dragpoint.compiler.settings import MachineSetup
 from dragpoint.draw.sheet import render_nest
 from dragpoint.estimate.cycle import estimate_job
+from dragpoint.estimate.price import DEFAULT_RATE, DEFAULT_SETTING, quote_job
 from dragpoint.estimate.setups import job_work
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import PostOptions, post_names, render
@@ -185,6 +186,42 @@ def nest(schedule: Path, no_rotate: bool, first_fit: bool, out: Path | None, sca
     for item in result:
         click.echo(str(item))
     click.echo(str(result))
+
+
+@job.command("quote")
+@SCHEDULE
+@click.option("--rate", default=DEFAULT_RATE, show_default=True, help="Money an hour.")
+@click.option("--setting", default=DEFAULT_SETTING, show_default=True, help="Money a cutter.")
+@click.option("--json", "as_json", is_flag=True, help="Print it as JSON.")
+def quote(schedule: Path, rate: float, setting: float, as_json: bool) -> None:
+    """Price a job: material, machining and setting."""
+    with handled():
+        made = compile_job(read_schedule(schedule))
+        priced = quote_job(made, rate=rate, setting=setting)
+    if as_json:
+        echo_json(
+            {
+                "job": priced.job,
+                "pieces": priced.pieces,
+                "material": round(priced.material, 2),
+                "machining": round(priced.machining, 2),
+                "setting": round(priced.setting, 2),
+                "total": round(priced.total, 2),
+                "each": round(priced.each, 2),
+                "unpriced_stock": list(priced.unpriced_stock),
+            }
+        )
+        return
+    click.echo(f"material   {priced.material:>10.2f}")
+    click.echo(f"machining  {priced.machining:>10.2f}")
+    click.echo(f"setting    {priced.setting:>10.2f}")
+    click.echo(f"total      {priced.total:>10.2f}")
+    click.echo(str(priced))
+    if not priced.complete:
+        click.echo(
+            f"the rack has no price for {', '.join(priced.unpriced_stock)}",
+            err=True,
+        )
 
 
 @job.command("summary")
