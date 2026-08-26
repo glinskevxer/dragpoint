@@ -14,6 +14,11 @@ Nothing here is new work. It is the other commands in one order, writing
 into one directory with names an operator can read, and it stops before
 writing anything if the rules found an error, because a pack of programs for
 a job that cannot be cut is worse than no pack at all.
+
+The last file it writes is a list of the others. A folder of forty files is
+a folder somebody has to work out the shape of, and the one thing that is
+never in it is what it is supposed to contain, so a file that went missing
+between here and the machine goes unnoticed.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from dragpoint.compiler.drill import drill_plate
 from dragpoint.compiler.job import EngravedJob, compile_job
 from dragpoint.draw.sheet import render_nest
 from dragpoint.draw.svg import render_svg
+from dragpoint.estimate.price import quote_job
 from dragpoint.nest.shelf import nest_job
 from dragpoint.post.base import POSTS, PostOptions, render
 from dragpoint.report.setup import setup_sheet
@@ -48,6 +54,9 @@ WINDOWS = "windows"
 
 DRAWINGS = "drawings"
 """Subdirectory the plate previews go in."""
+
+NEWLINE = "\n"
+"""What the text files in a pack are joined with, on every machine."""
 
 
 @click.command("pack")
@@ -85,6 +94,7 @@ def pack(
     if not no_drawings:
         written += _drawings(made, out)
     written += _paperwork(made, spec, out)
+    written += _contents(made, out)
     click.echo(f"{written} files in {out}")
     context.exit(exit_code_for(made.report()))
 
@@ -166,11 +176,56 @@ def _drawings(made: EngravedJob, out: Path) -> int:
 
 
 def _paperwork(made: EngravedJob, spec: JobSpec, out: Path) -> int:
-    """The setup sheet, the travellers, and the nest if there is a sheet."""
+    """The setup sheet, the travellers, the quote, and the nest if there is one."""
     nest = nest_job(spec) if spec.sheet is not None else None
     write_out(setup_sheet(made, nest=nest), out / "setup.txt")
     write_out(travellers(tuple(made)), out / "travellers.txt")
+    write_out(_quote_page(made), out / "quote.txt")
     if nest is None:
-        return 2
+        return 3
     write_out(render_nest(nest), out / "nest.svg")
-    return 3
+    return 4
+
+
+def _quote_page(made: EngravedJob) -> str:
+    """What the job comes to, as a page for the folder.
+
+    In the pack rather than only on the command line because the folder is
+    what gets found six months later when somebody asks why the reorder
+    costs more than the first one did.
+    """
+    priced = quote_job(made)
+    lines = [
+        f"QUOTE   {priced.job}",
+        "",
+        f"pieces     {priced.pieces}",
+        f"stock      {priced.area / 1_000_000.0:.3f}m2",
+        "",
+        f"material   {priced.material:>10.2f}",
+        f"machining  {priced.machining:>10.2f}",
+        f"setting    {priced.setting:>10.2f}",
+        f"total      {priced.total:>10.2f}",
+        f"each       {priced.each:>10.2f}",
+    ]
+    if not priced.complete:
+        lines.extend(["", f"no price on the rack for {', '.join(priced.unpriced_stock)}"])
+    return NEWLINE.join(lines) + NEWLINE
+
+
+def _contents(made: EngravedJob, out: Path) -> int:
+    """A list of everything in the pack, written last so it lists itself.
+
+    Sorted by path, because that is the order a folder shows them in and a
+    list in a different order from the folder is a list nobody checks
+    against the folder.
+    """
+    found = sorted(
+        path for path in out.rglob("*") if path.is_file() and path.name != "contents.txt"
+    )
+    lines = [f"CONTENTS   {made.name}", "", f"{len(found)} files", ""]
+    lines.extend(
+        f"{str(path.relative_to(out)).replace(chr(92), '/'):<40}{path.stat().st_size:>9} bytes"
+        for path in found
+    )
+    write_out(NEWLINE.join(lines) + NEWLINE, out / "contents.txt")
+    return 1

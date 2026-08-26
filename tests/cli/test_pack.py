@@ -111,9 +111,56 @@ def test_a_job_with_no_sheet_packs_without_a_nest(runner: CliRunner, tmp_path: P
 def test_the_command_says_how_many_files_it_wrote(runner: CliRunner, tmp_path: Path) -> None:
     out = tmp_path / "pack"
     result = run(runner, "pack", str(EXAMPLE), "--out", str(out))
-    assert "19 files" in result.output
+    assert "21 files" in result.output
 
 
 def test_a_schedule_that_is_not_there_is_a_usage_error(runner: CliRunner, tmp_path: Path) -> None:
     result = run(runner, "pack", "no-such-job.toml", "--out", str(tmp_path / "pack"))
     assert result.exit_code == 2
+
+
+def test_the_pack_carries_a_quote(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "pack"
+    packed(runner, out)
+    quote = (out / "quote.txt").read_text(encoding="utf-8")
+    assert "QUOTE   MCC-7" in quote
+    assert "material" in quote
+    assert "each" in quote
+
+
+def test_the_pack_lists_its_own_contents(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "pack"
+    files = packed(runner, out)
+    listed = (out / "contents.txt").read_text(encoding="utf-8")
+    assert "CONTENTS   MCC-7" in listed
+    for name in files:
+        if name != "contents.txt":
+            assert name in listed
+
+
+def test_the_contents_list_does_not_list_itself(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "pack"
+    packed(runner, out)
+    assert "contents.txt" not in (out / "contents.txt").read_text(encoding="utf-8")
+
+
+def test_the_contents_list_counts_what_it_lists(runner: CliRunner, tmp_path: Path) -> None:
+    out = tmp_path / "pack"
+    files = packed(runner, out)
+    listed = (out / "contents.txt").read_text(encoding="utf-8")
+    assert f"{len(files) - 1} files" in listed
+
+
+def test_a_quote_that_could_not_price_a_stock_says_so_in_the_pack(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    schedule = tmp_path / "steel.toml"
+    schedule.write_text(
+        "[job]\nname='J'\ncutter='V10-005'\n[defaults]\nstock='STAIN-10'\ndepth='0.08mm'\n"
+        "[[plate]]\nname='P'\nsize=['60mm','20mm']\nlines=['RUN']\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "pack"
+    result = run(runner, "pack", str(schedule), "--out", str(out))
+    assert result.exit_code == 0
+    assert "no price on the rack" in (out / "quote.txt").read_text(encoding="utf-8")
