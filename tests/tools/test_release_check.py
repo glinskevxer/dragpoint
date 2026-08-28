@@ -134,3 +134,30 @@ def test_a_release_with_several_problems_counts_them(
     monkeypatch.setattr(smoke, "main", lambda arguments: 1)
     assert release_check.main([]) == 1
     assert "release: 2 problems" in capsys.readouterr().err
+
+
+def test_the_changelog_headings_are_read_newest_first() -> None:
+    found = release_check._changelog_versions()
+    assert found[0] == __version__
+    assert "0.1.0" in found
+
+
+def test_the_changelog_has_to_lead_with_the_version_being_released() -> None:
+    assert release_check._changelog_leads_with(__version__)
+    assert not release_check._changelog_leads_with("0.1.0")
+
+
+def test_a_changelog_that_only_mentions_the_version_is_not_enough(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(release_check, "_changelog_versions", lambda: ("2.0.0", __version__))
+    assert release_check.main([]) == 1
+    assert "leads with 2.0.0" in capsys.readouterr().err
+
+
+def test_a_changelog_that_is_not_there_says_nothing_about_any_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(release_check, "ROOT", tmp_path)
+    assert release_check._changelog_versions() == ()
+    assert not release_check._changelog_leads_with(__version__)

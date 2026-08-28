@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0
+
+The three setups. A plate is engraved, drilled and milled by one package
+now, and everything that reads a plate reads all three.
+
+- Window milling with tabs, and the rules that say whether a window can be cut
+- Drilling grouped by diameter, one program per drill
+- Numbered runs: one line on a schedule becomes twelve plates
+- Composed accented capitals, and figures that can be set on one pitch
+- Tip life, a whole shop time across every setup, and a priced quote
+- A laser marker post, work offsets, ramped entry and fixture repeats
+- `dragpoint pack`, which writes the whole folder that goes to the machine
+- The rack and the faces come out of files a shop can edit
+
 ## 0.1.0
 
 First working version. Compiles a legend plate schedule into engraving

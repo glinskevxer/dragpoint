@@ -83,3 +83,21 @@ def test_an_unknown_subcommand_is_a_usage_error(runner: CliRunner) -> None:
 def test_no_arguments_prints_the_help(runner: CliRunner) -> None:
     result = run(runner)
     assert "Usage:" in result.output
+
+
+def test_the_version_the_command_line_reports_is_the_package_version(runner: CliRunner) -> None:
+    from dragpoint import __version__
+
+    result = run(runner, "--version")
+    assert __version__ in result.output
+
+
+def test_the_version_is_the_one_the_packaging_says(runner: CliRunner) -> None:
+    import tomllib
+    from pathlib import Path
+
+    from dragpoint import __version__
+
+    root = Path(__file__).resolve().parents[2]
+    document = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    assert document["project"]["version"] == __version__

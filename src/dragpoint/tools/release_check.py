@@ -1,8 +1,9 @@
 """The last gate before a release: is everything that should agree, agreeing.
 
 Three numbers have to be the same and live in three places, the changelog
-has to have something to say about the version being released, and every
-generated document has to be the one the code would write today. None of
+has to lead with the version being released rather than merely mention it
+somewhere, and every generated document has to be the one the code would
+write today. None of
 those is hard. All of them have been wrong at least once in some shop, and
 every one of them is only found by the customer.
 
@@ -94,10 +95,31 @@ def _pyproject_version() -> str:
 
 def _changelog_mentions(version: str) -> bool:
     """True when the changelog has a heading for this version."""
+    return version in _changelog_versions()
+
+
+def _changelog_versions() -> tuple[str, ...]:
+    """Every version the changelog has a heading for, newest first."""
     path = ROOT / "CHANGELOG.md"
     if not path.is_file():
-        return False
-    return f"## {version}" in path.read_text(encoding="utf-8")
+        return ()
+    return tuple(
+        line.removeprefix("## ").strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.startswith("## ")
+    )
+
+
+def _changelog_leads_with(version: str) -> bool:
+    """True when the newest thing in the changelog is this version.
+
+    Mentioning the version somewhere is not enough. A release built from a
+    branch that added its notes under an older heading passes the mention
+    check and ships a changelog whose top entry is the version before it,
+    which is exactly the file everybody reads first.
+    """
+    found = _changelog_versions()
+    return bool(found) and found[0] == version
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
@@ -110,6 +132,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
         problems.append(f"pyproject says {packaged} and the package says {__version__}")
     if not _changelog_mentions(__version__):
         problems.append(f"the changelog has nothing to say about {__version__}")
+    elif not _changelog_leads_with(__version__):
+        problems.append(f"the changelog leads with {_changelog_versions()[0]}, not {__version__}")
     for name in WANTED_DOCS:
         if not (DOCS / name).is_file():
             problems.append(f"docs/{name} is missing")

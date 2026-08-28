@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dragpoint"
-version = "0.1.0"
+version = "1.0.0"
 description = "Stroke font and engraving toolpath compiler for control panel legend plates"
 requires-python = ">=3.11"
 dependencies = ["click==8.1.8"]
