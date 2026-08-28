@@ -13,6 +13,14 @@ command could not be carried out at all.
 
 List what the shop holds.
 
+### `dragpoint crib about`
+
+Say what this installation is and where it is reading from.
+
+| option | what it does | default |
+| --- | --- | --- |
+| `--json` | Print it as JSON. |  |
+
 ### `dragpoint crib cutters`
 
 List the cutters in the crib.

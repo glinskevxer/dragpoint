@@ -27,10 +27,16 @@ from dragpoint.tools.support import PACKAGE, Problem, dotted_name, modules, repo
 __all__ = ["ENTRY_POINTS", "main"]
 
 ENTRY_POINTS = {
+    "dragpoint.__main__",
     "dragpoint.cli.main",
     "dragpoint.tools.support",
 }
-"""Modules nothing imports because something outside the package runs them."""
+"""Modules nothing imports because something outside the package runs them.
+
+``__main__`` is the clearest case there is: the thing that imports it is the
+interpreter, when somebody types ``python -m dragpoint``, and a package that
+imported its own ``__main__`` would run the command line on import.
+"""
 
 REGISTERS = {
     "dragpoint.rules": "dragpoint.rules",

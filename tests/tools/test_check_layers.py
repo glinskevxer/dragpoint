@@ -25,8 +25,17 @@ def test_every_package_directory_has_a_rank() -> None:
 
 
 def test_every_top_level_module_has_a_rank() -> None:
-    modules = {path.stem for path in PACKAGE.glob("*.py") if path.name not in {"__init__.py"}}
+    modules = {
+        path.stem
+        for path in PACKAGE.glob("*.py")
+        if path.name not in {"__init__.py", "__main__.py"}
+    }
     assert modules <= set(check_layers.RANKS)
+
+
+def test_the_module_entry_point_is_in_no_layer() -> None:
+    assert "__main__" not in check_layers.RANKS
+    assert (PACKAGE / "__main__.py").is_file()
 
 
 def test_geometry_is_below_everything_that_uses_it() -> None:

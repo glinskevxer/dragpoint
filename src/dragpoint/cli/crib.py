@@ -8,15 +8,19 @@ answering yes or no.
 
 from __future__ import annotations
 
+import os
+import platform
 from pathlib import Path
 
 import click
 
+from dragpoint import __version__
 from dragpoint.cli.common import echo_json, handled
+from dragpoint.font.library import face_path, local_names, shipped_names
 from dragpoint.post.base import POSTS
 from dragpoint.rules.check import REGISTRY
 from dragpoint.tool.cutter import CATALOGUE
-from dragpoint.tool.material import MATERIALS, Material, load_rack
+from dragpoint.tool.material import MATERIALS, RACK_FILE, Material, load_rack
 
 __all__ = ["crib"]
 
@@ -94,6 +98,43 @@ def stock(as_json: bool, rack: Path | None) -> None:
             f"depth {low:>5.2f} to {high:>5.2f}mm  "
             f"nominal {sheet.nominal_depth:>5.2f}mm  {sheet.description}"
         )
+
+
+@crib.command("about")
+@click.option("--json", "as_json", is_flag=True, help="Print it as JSON.")
+def about(as_json: bool) -> None:
+    """Say what this installation is and where it is reading from.
+
+    The first question anybody asks when a plate comes out wrong is which
+    version cut it and which rack and which faces it used, and on a shop
+    floor terminal that is three questions nobody can answer. This answers
+    them in one command.
+    """
+    faces = [str(entry) for entry in face_path()]
+    if as_json:
+        echo_json(
+            {
+                "version": __version__,
+                "python": platform.python_version(),
+                "rack": str(RACK_FILE),
+                "stock": len(MATERIALS),
+                "cutters": len(CATALOGUE),
+                "faces": {"shipped": list(shipped_names()), "local": list(local_names())},
+                "face_path": faces,
+                "posts": sorted(POSTS),
+                "rules": len(REGISTRY),
+            }
+        )
+        return
+    click.echo(f"dragpoint  {__version__} on python {platform.python_version()}")
+    click.echo(f"rack       {RACK_FILE} ({len(MATERIALS)} stocks)")
+    click.echo(f"cutters    {len(CATALOGUE)} in the crib")
+    click.echo(f"faces      {', '.join(shipped_names())} shipped")
+    if local_names():
+        click.echo(f"           {', '.join(local_names())} on the search path")
+    click.echo(f"face path  {os.pathsep.join(faces) if faces else 'not set'}")
+    click.echo(f"posts      {', '.join(sorted(POSTS))}")
+    click.echo(f"rules      {len(REGISTRY)} registered")
 
 
 @crib.command("posts")

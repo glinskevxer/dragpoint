@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from dragpoint import __version__
@@ -109,3 +110,45 @@ def test_a_rack_file_that_is_wrong_is_a_message_and_not_a_traceback(
     result = run(runner, "crib", "stock", "--rack", str(target))
     assert result.exit_code != 0
     assert "no stock in this file" in result.output
+
+
+def test_about_says_what_the_installation_is(runner: CliRunner) -> None:
+    result = run(runner, "crib", "about")
+    assert result.exit_code == 0
+    assert __version__ in result.output
+    assert "rack" in result.output
+    assert "panelgothic" in result.output
+
+
+def test_about_says_where_the_rack_came_from(runner: CliRunner) -> None:
+    result = run(runner, "crib", "about")
+    assert "rack.toml" in result.output
+    assert f"{len(MATERIALS)} stocks" in result.output
+
+
+def test_about_says_the_face_path_is_not_set_when_it_is_not(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DRAGPOINT_FACES", raising=False)
+    assert "not set" in run(runner, "crib", "about").output
+
+
+def test_about_names_the_shop_faces_when_there_are_some(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "housecut.strk").write_text(
+        "face housecut\nupem 100\ncap 70\nxheight 50\nascender 70\ndescender 0\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DRAGPOINT_FACES", str(tmp_path))
+    result = run(runner, "crib", "about")
+    assert "housecut" in result.output
+    assert str(tmp_path) in result.output
+
+
+def test_about_can_come_out_as_json(runner: CliRunner) -> None:
+    payload = json.loads(run(runner, "crib", "about", "--json").output)
+    assert payload["version"] == __version__
+    assert payload["stock"] == len(MATERIALS)
+    assert "iso" in payload["posts"]
+    assert payload["rules"] > 0
